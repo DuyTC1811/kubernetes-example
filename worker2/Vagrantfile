@@ -4,13 +4,13 @@
 # Tạo máy ảo từ box centos/7, gán địa chỉ IP, đặt hostname, gán 2GB bộ nhớ, 2 cpus  
 Vagrant.configure("2") do |config|
     config.vm.box = "centos/7"
-    config.vm.network "private_network", ip: "172.16.10.100"
-    config.vm.hostname = "master.xtl"
+    config.vm.network "private_network", ip: "172.16.10.102"
+    config.vm.hostname = "worker2.xtl"
   
     config.vm.provider "virtualbox" do |vb|
-       vb.name = "master.xtl"
+       vb.name = "worker2.xtl"
        vb.cpus = 2
-       vb.memory = "2048"
+       vb.memory = "1024"
     end
     
     # Chạy file install-docker-kube.sh sau khi nạp Box
