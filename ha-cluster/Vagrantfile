@@ -1,7 +1,7 @@
 Vagrant.configure("2") do |config|
 
     # Load Balancer Nodes
-    LoadBalancerCount = 2
+    LoadBalancerCount = 1
     (1..LoadBalancerCount).each do |i|
         config.vm.define "lb-#{i}" do |lb|
             config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
@@ -16,13 +16,29 @@ Vagrant.configure("2") do |config|
         end
     end
 
+    # ECTD Nodes
+    ECTDCount = 3
+    (1..ECTDCount).each do |i|
+        config.vm.define "etcd-#{i}" do |master|
+            config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
+            master.vm.hostname = "etcd-#{i}"
+            master.vm.network "private_network", ip: "192.168.56.2#{i}"
+
+            master.vm.provider "virtualbox" do |vb|
+                vb.name = "etcd-#{i}"
+                vb.memory = 2048
+                vb.cpus = 2
+            end
+        end
+    end
+
     # Master Nodes
-    MasterCount = 3
+    MasterCount = 2
     (1..MasterCount).each do |i|
         config.vm.define "master-#{i}" do |master|
             config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
             master.vm.hostname = "master-#{i}"
-            master.vm.network "private_network", ip: "192.168.56.2#{i}"
+            master.vm.network "private_network", ip: "192.168.56.3#{i}"
   
             master.vm.provider "virtualbox" do |vb|
                 vb.name = "master-#{i}"
@@ -38,7 +54,7 @@ Vagrant.configure("2") do |config|
         config.vm.define "worker-#{i}" do |worker|
             worker.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
             worker.vm.hostname = "worker-#{i}"
-            worker.vm.network "private_network", ip: "192.168.56.3#{i}"
+            worker.vm.network "private_network", ip: "192.168.56.5#{i}"
   
             worker.vm.provider "virtualbox" do |vb|
                 vb.name = "worker-#{i}"

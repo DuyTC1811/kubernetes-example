@@ -2,7 +2,7 @@
 
 echo "[ STEP 1 ] ---[ TURN OFF SWAP ]"
 sudo swapoff -a
-sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
+sudo sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
 
 echo "[ STEP 2 ] --- [ SET IP FORWARDING ]"
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
