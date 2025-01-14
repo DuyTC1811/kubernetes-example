@@ -4,7 +4,7 @@ ETCD_VER=v3.5.17
 
 echo "---[ TURN OFF SWAP ]---"
 sudo swapoff -a
-sudo sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
+sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
 
 echo "ETCD VERSION: ${ETCD_VER}"
 
