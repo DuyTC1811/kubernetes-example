@@ -24,7 +24,7 @@ localAPIEndpoint:
   advertiseAddress: "192.168.56.31" # Địa chỉ IP của server control plane
   bindPort: 6443                    # Cổng mặc định API server
 
-certificateKey: "af5047a1ab1604cf96170be083ae9342ce46ee6b5bddf47346dae8813bf78052"
+certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01" # Được lấy từ "kubeadm certs certificate-key"
 
 # skipPhases:
 #   - preflight       # Bỏ qua kiểm tra ban đầu
@@ -53,7 +53,7 @@ networking:
   podSubnet: "192.168.0.0/16"    # Dải địa chỉ cho Pods, tùy chỉnh theo yêu cầu
   dnsDomain: "cluster.local"     # Tên miền DNS nội bộ
 
-kubernetesVersion: "v1.32"
+kubernetesVersion: "v1.32.0"
 
 # Thay giá trị này bằng IP và cổng của LoadBalancer/Public IP OR Private IP
 controlPlaneEndpoint: "192.168.56.11:6443"
