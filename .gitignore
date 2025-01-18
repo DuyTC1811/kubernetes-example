@@ -1,2 +1,2 @@
 single-cluster/.vagrant
-ha-cluster/.vagrant
+external-etcd/.vagrant

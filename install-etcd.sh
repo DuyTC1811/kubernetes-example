@@ -34,3 +34,4 @@ echo "[ STEP 5 ] --- [ CHECK VESION ]"
 etcd --version
 etcdctl version
 etcdutl version
+mkdir -p /var/lib/etcd

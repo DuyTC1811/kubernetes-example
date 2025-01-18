@@ -36,16 +36,9 @@ echo "  - etcd-key.pem  (etcd private key)"
 echo "  - extfile.cnf   (SAN configuration)"
 
 
-# ssh -i ../../.ssh/id_rsa.pub root@192.168.56.21 "[ -d /var/lib/etcd ] || mkdir -p /var/lib/etcd"
 # scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
-
-# ssh -i ../../.ssh/id_rsa.pub root@192.168.56.22 "[ -d /var/lib/etcd ] || mkdir -p /var/lib/etcd"
 # scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
-
-# ssh -i ../../.ssh/id_rsa.pub root@192.168.56.23 "[ -d /var/lib/etcd ] || mkdir -p /var/lib/etcd"
 # scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
-
-
 
 # scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.31:/etcd/kubernetes/pki/etcd
 # scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.32:/etcd/kubernetes/pki/etcd
