@@ -9,7 +9,7 @@
     2. [Cấu hình ETCD HA](#2-cấu-hình-etcd-ha)
     3. [Kiểm tra hoạt động ETCD](#3-kiểm-tra-hoạt-động-etcd)
 5. [Cấu hình Kubernetes Master trỏ tới ETCD](#5-cấu-hình-kubernetes-master-trỏ-tới-etcd)
-    1. [Cài Kubernetes](#1-cài-kubernetes) 
+    1. [Cài Kubernetes](#1-cài-kubernetes)
     2. [Config HAProxy]()
     3. [Config Kubeadm]()
 6. [Kiểm tra và xác thực](#kiểm-tra-và-xác-thực)
@@ -18,11 +18,14 @@
 ---
 
 ## Giới thiệu
+
 Hướng dẫn này mô tả cách thiết lập **High Availability (HA)** cho **Kubernetes** với **ETCD** dưới dạng External (ngoại vi).  
 Bằng cách tách ETCD khỏi các node Master và triển khai nó thành một cluster độc lập, có thể đảm bảo tính sẵn sàng cao, cũng như tránh được rủi ro về “điểm chết” (single point of failure).
 
 ## Kiến trúc
+
 Mô hình tổng thể:
+
 - Triển khai một cluster ETCD riêng biệt gồm nhiều node (thường là **3** hoặc **5** node để đảm bảo **quorum**).
 - Các node Kubernetes Master (control plane) sẽ trỏ đến ETCD cluster này.
 - Nếu một node ETCD gặp sự cố, các node ETCD còn lại vẫn duy trì khả năng đọc/ghi dữ liệu, đảm bảo toàn hệ thống tiếp tục hoạt động ổn định.
@@ -41,8 +44,8 @@ Mô hình tổng thể:
    +----------------------------------+
 ```
 
-
 ## Chuẩn bị môi trường
+
 1. **Hệ điều hành**: Phổ biến là Linux (Ubuntu/CentOS/RHEL/...).  
 2. **Phiên bản Kubernetes**: Khuyến nghị từ Kubernetes 1.20 trở lên.
 3. **Phần cứng**: Mỗi node trong ETCD cluster cần tài nguyên tối thiểu (VD: 2 CPU, 2GB RAM, dùng SSD nếu có thể).  
@@ -56,6 +59,7 @@ Mô hình tổng thể:
 ## Cài đặt và cấu hình cluster ETCD
 
 ### 1. Cài đặt ETCD
+
 - Trên **mỗi node ETCD** (giả sử các node đặt tên là `etcd-01`, `etcd-02`, `etcd-03`):<br>
     > **Lưu ý**: Lệnh `sudo -i` dùng quyền cao nhất để cài đặt
 
@@ -104,9 +108,11 @@ Mô hình tổng thể:
     etcdctl version
     etcdutl version
     ```
+
 ### 2. Cấu hình ETCD HA
 
 1. **Tạo thư mục chứa chứng chỉ**:
+
     ```bash
     CERT_DIR="openssl"
     mkdir -p ${CERT_DIR}
@@ -115,16 +121,20 @@ Mô hình tổng thể:
 
 2. **Tạo CA (Certificate Authority)**:
     - Tạo khóa riêng cho CA:
+
         ```bash
         openssl genrsa -out ca-key.pem 2048
         ```
+
         - **Mục đích:** Tạo khóa riêng (private key) cho CA, được lưu trong file `ca-key.pem`.
         - **Dung lượng khóa:** 2048-bit.
 
     - Tạo yêu cầu ký chứng chỉ (CSR) cho CA:
+
         ```bash
         openssl req -new -key ca-key.pem -out ca-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=ca"
         ```
+
         - **Mục đích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
             - `C=VN`: Quốc gia (Vietnam).
             - `ST=Metri`: Bang/Tỉnh.
@@ -133,38 +143,47 @@ Mô hình tổng thể:
             - `CN=ca`: Tên thông thường (Common Name).
 
     - Ký chứng chỉ CA (self-signed):
+
         ```bash
         openssl x509 -req -in ca-csr.pem -out ca.pem -days 3650 -signkey ca-key.pem -sha256
         ```
+
         - **Mục đích:** Ký chứng chỉ cho CA.
         - **Thời hạn:** 3650 ngày (~10 năm).
         - **Kết quả:** Tạo file chứng chỉ CA `ca.pem`.
 
 3. **Tạo khóa riêng và CSR cho ETCD**:
     - Tạo khóa riêng cho ETCD:
+
         ```bash
         openssl genrsa -out etcd-key.pem 2048
         ```
+
         - **Mục đích:** Tạo khóa riêng (private key) cho ETCD.
 
     - Tạo yêu cầu ký chứng chỉ (CSR) cho ETCD:
+
         ```bash
         openssl req -new -key etcd-key.pem -out etcd-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=etcd"
         ```
 
 4. **Tạo file cấu hình SAN (Subject Alternative Name)**:
+
     ```bash
     echo "subjectAltName = DNS:localhost,IP:192.168.56.21,IP:192.168.56.22,IP:192.168.56.23,IP:127.0.0.1" > extfile.cnf
     ```
+
     - **Mục đích:** Xác định các tên miền (DNS) và địa chỉ IP hợp lệ cho chứng chỉ.
     - **Nội dung SAN:**
         - **DNS:** `localhost`.
         - **IP:** `192.168.56.21`, `192.168.56.22`, `192.168.56.23`, `127.0.0.1`.
 
 5. **Ký chứng chỉ ETCD với CA**:
+
     ```bash
     openssl x509 -req -in etcd-csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 3650 -out etcd.pem -sha256 -extfile extfile.cnf
     ```
+
     - **Mục đích:** Ký chứng chỉ cho ETCD (`etcd.pem`) bằng CA (`ca.pem` và `ca-key.pem`).
     - **Thời hạn:** 3650 ngày (~10 năm).
     - **File kết quả:**
@@ -172,6 +191,7 @@ Mô hình tổng thể:
         - `ca.srl`: File serial lưu số serial của chứng chỉ.
 
 6. **Hiển thị thông báo hoàn thành**:
+
     ```bash
     echo "Certificates have been successfully created in the '${CERT_DIR}' directory."
     echo "Generated files:"
@@ -184,11 +204,13 @@ Mô hình tổng thể:
     ```
 
 7. **Sao chép chứng chỉ đến các node**:
+
     ```bash
     scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
     scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
     scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
     ```
+
     - **Giải thích:**
         - `~/.ssh/id_rsa`: Đường dẫn tới private key để kết nối qua SSH.
         - `root@192.168.56.x`: Địa chỉ IP của các node ETCD.
@@ -196,6 +218,7 @@ Mô hình tổng thể:
 
 8. **Tạo file `etcd.service` trên mỗi node**:
     - Tạo file `/etc/systemd/system/etcd.service`:
+
         ```bash
         cat <<EOF > /etc/systemd/system/etcd.service
             [Unit]
@@ -230,10 +253,13 @@ Mô hình tổng thể:
             sudo systemctl enable etcd
             sudo systemctl start etcd
         ```
-    ## 3. Kiểm tra hoạt động ETCD
+
+   ## 3. Kiểm tra hoạt động ETCD
+
     ```bash
     sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
     ```
+
     ```plaintex
     +----------------------------+--------+------------+-------+
     |          ENDPOINT          | HEALTH |    TOOK    | ERROR |
@@ -243,11 +269,13 @@ Mô hình tổng thể:
     | https://192.168.56.22:2379 |   true |  7.83654ms |       |
     +----------------------------+--------+------------+-------+
     ```
-# 5. Cấu hình Kubernetes Master trỏ tới ETCD
+
+## 5. Cấu hình Kubernetes Master trỏ tới ETCD
 
 ## 1. Cài Kubernetes
 
 ### Bước 1: Cài đặt các gói cần thiết
+
 ```bash
 #!/bin/bash
 
@@ -309,6 +337,7 @@ mkdir -vp /etcd/kubernetes/pki/etcd/
 ```
 
 ### Bước 2: Đặt tên hostname
+
 ```bash
 sudo bash -c 'cat <<EOF >>/etc/hosts
 192.168.56.31 master-01
@@ -324,13 +353,16 @@ reboot
 ## 2. Config HAProxy
 
 ### Bước 1: Cài đặt HAProxy
+
 ```bash
 sudo apt-get update
 sudo apt-get install haproxy -y
 ```
 
 ### Bước 2: Cấu hình HAProxy
+
 Mở file cấu hình HAProxy:
+
 ```bash
 #!/bin/bash
 set -xe
@@ -385,6 +417,7 @@ sudo systemctl restart haproxy
 ```
 
 Thêm nội dung sau để cấu hình cân bằng tải giữa các node ETCD:
+
 ```plaintext
 frontend etcd_front
     bind *:2379
@@ -398,6 +431,7 @@ backend etcd_back
 ```
 
 ### Bước 3: Khởi động lại HAProxy
+
 ```bash
 sudo systemctl restart haproxy
 sudo systemctl enable haproxy
@@ -406,7 +440,9 @@ sudo systemctl enable haproxy
 ## 3. Config Kubeadm
 
 ### Bước 1: Tạo file cấu hình `kubeadm-config.yaml`
+
 Tạo file với nội dung như sau:
+
 ```yaml
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
@@ -508,11 +544,13 @@ kind: KubeProxyConfiguration
 ```
 
 ### Bước 2: Initialize Kubernetes Cluster
+
 ```bash
 sudo kubeadm init --config=kubeadm-config.yaml
 ```
 
 ### Bước 3: Cấu hình `kubectl`
+
 ```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -520,6 +558,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
 ### Bước 4: Kiểm tra trạng thái
+
 ```bash
 kubectl get nodes
 kubectl get pods -A
