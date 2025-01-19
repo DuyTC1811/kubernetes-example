@@ -215,7 +215,7 @@ Ký chứng chỉ cho ETCD `(etcd.pem)` sử dụng chứng chỉ CA `(ca.pem)` 
     sudo systemctl enable etcd
     sudo systemctl start etcd
     ```
-9. **Check Kiểm tra trạng thái**
+## 3. Kiểm tra hoạt động ETCD
     - `sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster`
     ```plaintex
     +----------------------------+--------+------------+-------+
