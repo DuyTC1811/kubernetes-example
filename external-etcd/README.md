@@ -103,62 +103,72 @@ Mô hình tổng thể:
     ```
 ### 2. Cấu hình ETCD HA
 
-1. **Tạo thư mục chứa chứng chỉ**:<br>
+1. **Tạo thư mục chứa chứng chỉ**:
     ```bash
     CERT_DIR="openssl"
     mkdir -p ${CERT_DIR}
     cd ${CERT_DIR}
     ```
-2. **Tạo CA (Certificate Authority)**<br>
-    ```bash
-    openssl genrsa -out ca-key.pem 2048
-    ```
-    - **Mục đích:** Tạo khóa riêng (private key) cho CA, được lưu trong file ca-key.pem.<br>
-    **Dung lượng khóa:** 2048-bit.
-    ```bash
-    openssl req -new -key ca-key.pem -out ca-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=ca"
-    ```
-    - **Mục đích:** Tạo yêu cầu ký chứng chỉ (Certificate Signing Request, CSR) cho CA với thông tin:<br>
-    - `C=VN:` Quốc gia (Vietnam).
-    - `ST=Metri:` Bang/Tỉnh.
-    - ``L=Hanoi:`` Thành phố.
-    - ``O=example`` Tổ chức
-    - ``CN=ca`` Tên thông thường (Common Name)
-    ```bash
-    openssl x509 -req -in ca-csr.pem -out ca.pem -days 3650 -signkey ca-key.pem -sha256
-    ```
-    - Ký chứng chỉ CA (self-signed certificate).
-    - Chứng chỉ này có thời hạn 3650 ngày (~10 năm).
-    - File kết quả: ca.pem là chứng chỉ gốc của CA.
 
-3. **Tạo khóa riêng và CSR cho ETCD**
-    ```bash
-    openssl genrsa -out etcd-key.pem 2048
-    ```
-    - **Mục đích**: Tạo khóa riêng (private key) cho ETCD, được lưu trong file etcd-key.pem.
-    ```bash
-    openssl req -new -key etcd-key.pem -out etcd-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=etcd"
-    ```
-4. **Tạo file cấu hình SAN (Subject Alternative Name)**
+2. **Tạo CA (Certificate Authority)**:
+    - Tạo khóa riêng cho CA:
+        ```bash
+        openssl genrsa -out ca-key.pem 2048
+        ```
+        - **Mục đích:** Tạo khóa riêng (private key) cho CA, được lưu trong file `ca-key.pem`.
+        - **Dung lượng khóa:** 2048-bit.
+
+    - Tạo yêu cầu ký chứng chỉ (CSR) cho CA:
+        ```bash
+        openssl req -new -key ca-key.pem -out ca-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=ca"
+        ```
+        - **Mục đích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
+            - `C=VN`: Quốc gia (Vietnam).
+            - `ST=Metri`: Bang/Tỉnh.
+            - `L=Hanoi`: Thành phố.
+            - `O=example`: Tổ chức.
+            - `CN=ca`: Tên thông thường (Common Name).
+
+    - Ký chứng chỉ CA (self-signed):
+        ```bash
+        openssl x509 -req -in ca-csr.pem -out ca.pem -days 3650 -signkey ca-key.pem -sha256
+        ```
+        - **Mục đích:** Ký chứng chỉ cho CA.
+        - **Thời hạn:** 3650 ngày (~10 năm).
+        - **Kết quả:** Tạo file chứng chỉ CA `ca.pem`.
+
+3. **Tạo khóa riêng và CSR cho ETCD**:
+    - Tạo khóa riêng cho ETCD:
+        ```bash
+        openssl genrsa -out etcd-key.pem 2048
+        ```
+        - **Mục đích:** Tạo khóa riêng (private key) cho ETCD.
+
+    - Tạo yêu cầu ký chứng chỉ (CSR) cho ETCD:
+        ```bash
+        openssl req -new -key etcd-key.pem -out etcd-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=etcd"
+        ```
+
+4. **Tạo file cấu hình SAN (Subject Alternative Name)**:
     ```bash
     echo "subjectAltName = DNS:localhost,IP:192.168.56.21,IP:192.168.56.22,IP:192.168.56.23,IP:127.0.0.1" > extfile.cnf
     ```
-    - **Mục đích**: Xác định các tên miền (DNS) và địa chỉ IP hợp lệ cho chứng chỉ.
-    - **File** `extfile.cnf` chứa thông tin SAN:
-        - **DNS**: `localhost`.
-        - **IP**: Các IP trong ETCD cluster (`192.168.56.21`, `192.168.56.22`, `192.168.56.23`) và `127.0.0.1`.
+    - **Mục đích:** Xác định các tên miền (DNS) và địa chỉ IP hợp lệ cho chứng chỉ.
+    - **Nội dung SAN:**
+        - **DNS:** `localhost`.
+        - **IP:** `192.168.56.21`, `192.168.56.22`, `192.168.56.23`, `127.0.0.1`.
 
-5. **Ký chứng chỉ ETCD với CA**
+5. **Ký chứng chỉ ETCD với CA**:
     ```bash
     openssl x509 -req -in etcd-csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 3650 -out etcd.pem -sha256 -extfile extfile.cnf
     ```
-    - **Mục đích:**
-Ký chứng chỉ cho ETCD `(etcd.pem)` sử dụng chứng chỉ CA `(ca.pem)` và khóa riêng CA `(ca-key.pem).`
-    - Thời hạn chứng chỉ: 3650 ngày (~10 năm).
-    - **File đầu ra:**
-        - `etcd.pem:` Chứng chỉ cho ETCD.
-        - `ca.srl:` File serial được tạo tự động bởi `-CAcreateserial` (lưu trữ số serial của chứng chỉ).
-6. **Hiển thị thông báo hoàn thành**
+    - **Mục đích:** Ký chứng chỉ cho ETCD (`etcd.pem`) bằng CA (`ca.pem` và `ca-key.pem`).
+    - **Thời hạn:** 3650 ngày (~10 năm).
+    - **File kết quả:**
+        - `etcd.pem`: Chứng chỉ ETCD.
+        - `ca.srl`: File serial lưu số serial của chứng chỉ.
+
+6. **Hiển thị thông báo hoàn thành**:
     ```bash
     echo "Certificates have been successfully created in the '${CERT_DIR}' directory."
     echo "Generated files:"
@@ -169,52 +179,54 @@ Ký chứng chỉ cho ETCD `(etcd.pem)` sử dụng chứng chỉ CA `(ca.pem)` 
     echo "  - extfile.cnf   (SAN configuration)"
     ls -l "${CERT_DIR}"
     ```
-7. **Coppy file chứng chỉ cho từng ETCD**
-    ```bash
-    scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
-    scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
-    scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
-    ```
-    - **../../.ssh/id_rsa.pub:** Đường dẫn tới file public key được sử dụng để kết nối tới các máy từ xa mà không cần nhập mật khẩu.
-    - `ca.pem` `etcd.pem` `etcd-key.pem` danh sách các file bạn muốn sao chép từ máy cục bộ lên server.
-    - ``root@192.168.56.21:`` Địa chỉ IP của máy từ xa, đăng nhập với tài khoản root
-    - `/var/lib/etcd` Thư mục đích trên máy từ xa nơi các file sẽ được sao chép tới.
-8. **Setup ETCD service**
-    - tạo một file `setup-etcd.sh` cho `etcd-01`, `etcd-02`, `etcd-03` cấp quyển thực thi `chomd +x setup-etcd.sh`
-    ```bash
-    cat <<EOF > /etc/systemd/system/etcd.service
-    [Unit]
-    Description=etcd
-    [Service]
-    ExecStart=/usr/local/bin/etcd \\
-    --name etcd-01 \\                                            # Tên của node trong cụm etcd
-    --initial-advertise-peer-urls https://192.168.56.21:2380 \\  # URL để quảng cáo kết nối peer
-    --listen-peer-urls https://192.168.56.21:2380 \\             # URL để lắng nghe kết nối từ các node khác trong cụm
-    --listen-client-urls https://192.168.56.21:2379,https://127.0.0.1:2379 \\ # URL để lắng nghe các kết nối từ client
-    --advertise-client-urls https://192.168.56.21:2379 \\        # URL quảng cáo cho client kết nối
-    --initial-cluster-token etcd-cluster-1 \\                    # Token nhận diện cụm etcd
-    # Danh sách các node trong cụm và địa chỉ peer của chúng
-    --initial-cluster etcd-01=https://192.168.56.21:2380,etcd-02=https://192.168.56.22:2380,etcd-03=https://192.168.56.23:2380 \\
-    --log-outputs=/var/lib/etcd/etcd.log \\                      # File log của etcd
-    --initial-cluster-state new \\                               # Trạng thái ban đầu của cụm (new/existing)
-    --peer-auto-tls \\                                           # Kích hoạt tự động tạo TLS giữa các node trong cụm
-    --snapshot-count '10000' \\                                  # Số lượng thay đổi trước khi tạo snapshot
-    --wal-dir=/var/lib/etcd/wal \\                               # Thư mục lưu trữ WAL (Write-Ahead Log)
-    --client-cert-auth \\                                        # Kích hoạt xác thực client bằng chứng chỉ
-    --trusted-ca-file=/var/lib/etcd/ca.pem \\                    # File CA dùng để xác thực client
-    --cert-file=/var/lib/etcd/etcd.pem \\                        # File chứng chỉ của etcd server
-    --key-file=/var/lib/etcd/etcd-key.pem \\                     # File khóa riêng của etcd server
-    --data-dir=/var/lib/etcd/data                                # Thư mục lưu trữ dữ liệu của etcd
-    Restart=on-failure                                           # Tự động khởi động lại nếu service gặp lỗi
-    RestartSec=5                                                 # Thời gian chờ trước khi khởi động lại (5 giây)
 
-    [Install]
-    WantedBy=multi-user.target                                   # Dịch vụ sẽ được khởi động trong chế độ multi-user (chế độ server)
-    EOF
-    sudo systemctl daemon-reload
-    sudo systemctl enable etcd
-    sudo systemctl start etcd
+7. **Sao chép chứng chỉ đến các node**:
+    ```bash
+    scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
+    scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
+    scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
     ```
+    - **Giải thích:**
+        - `~/.ssh/id_rsa`: Đường dẫn tới private key để kết nối qua SSH.
+        - `root@192.168.56.x`: Địa chỉ IP của các node ETCD.
+        - `/var/lib/etcd`: Thư mục trên node từ xa để lưu chứng chỉ.
+
+8. **Tạo file `etcd.service` trên mỗi node**:
+    - Tạo file `/etc/systemd/system/etcd.service`:
+        ```bash
+        cat <<EOF > /etc/systemd/system/etcd.service
+            [Unit]
+            Description=etcd
+            [Service]
+            ExecStart=/usr/local/bin/etcd \\
+            --name etcd-01 \\                                            # Tên của node trong cụm etcd
+            --initial-advertise-peer-urls https://192.168.56.21:2380 \\  # URL để cho biết các node khác có thể kết nối qua Ip này
+            --listen-peer-urls https://192.168.56.21:2380 \\             # URL để lắng nghe kết nối từ các node khác trong cụm
+            --listen-client-urls https://192.168.56.21:2379,https://127.0.0.1:2379 \\ # URL để lắng nghe các kết nối từ client
+            --advertise-client-urls https://192.168.56.21:2379 \\        # URL quảng cáo cho client kết nối
+            --initial-cluster-token etcd-cluster-1 \\                    # Token nhận diện cụm etcd
+            # Danh sách các node trong cụm và địa chỉ peer
+            --initial-cluster etcd-01=https://192.168.56.21:2380,etcd-02=https://192.168.56.22:2380,etcd-03=https://192.168.56.23:2380 \\
+            --log-outputs=/var/lib/etcd/etcd.log \\                      # File log của etcd
+            --initial-cluster-state new \\                               # Trạng thái ban đầu của cụm (new/existing)
+            --peer-auto-tls \\                                           # Kích hoạt tự động tạo TLS giữa các node trong cụm
+            --snapshot-count '10000' \\                                  # Số lượng thay đổi trước khi tạo snapshot
+            --wal-dir=/var/lib/etcd/wal \\                               # Thư mục lưu trữ WAL (Write-Ahead Log)
+            --client-cert-auth \\                                        # Kích hoạt xác thực client bằng chứng chỉ
+            --trusted-ca-file=/var/lib/etcd/ca.pem \\                    # File CA dùng để xác thực client
+            --cert-file=/var/lib/etcd/etcd.pem \\                        # File chứng chỉ của etcd server
+            --key-file=/var/lib/etcd/etcd-key.pem \\                     # File khóa riêng của etcd server
+            --data-dir=/var/lib/etcd/data                                # Thư mục lưu trữ dữ liệu của etcd
+            Restart=on-failure                                           # Tự động khởi động lại nếu service gặp lỗi
+            RestartSec=5                                                 # Thời gian chờ trước khi khởi động lại (5 giây)
+
+            [Install]
+            WantedBy=multi-user.target                                   # Dịch vụ sẽ được khởi động trong chế độ multi-user (chế độ server)
+            EOF
+            sudo systemctl daemon-reload
+            sudo systemctl enable etcd
+            sudo systemctl start etcd
+        ```
     ## 3. Kiểm tra hoạt động ETCD
     ```bash
     sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
