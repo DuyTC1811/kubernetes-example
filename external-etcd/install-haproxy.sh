@@ -1,7 +1,12 @@
-sudo apt-get update
-sudo apt-get install haproxy -y
+#!/bin/bash
+set -xe
 
-cat <<EOF | sudo tee /etc/haproxy/haproxy.cfg
+sudo apt update
+sudo apt install haproxy -y
+sleep 2s
+sudo systemctl start haproxy && sudo systemctl enable haproxy
+
+sudo bash -c 'cat <<EOF | sudo tee /etc/haproxy/haproxy.cfg
 # Frontend cho Kubernetes API Server
 frontend kubernetes-frontend
   bind *:6443
@@ -41,5 +46,5 @@ backend nodeport-backend
   server worker-01 192.168.56.51
   server worker-02 192.168.56.52
   server worker-03 192.168.56.53
-EOF
+EOF'
 sudo systemctl restart haproxy
