@@ -10,10 +10,9 @@
     3. [Kiểm tra hoạt động ETCD](#3-kiểm-tra-hoạt-động-etcd)
 5. [Cấu hình Kubernetes Master trỏ tới ETCD](#5-cấu-hình-kubernetes-master-trỏ-tới-etcd)
     1. [Cài Kubernetes](#1-cài-kubernetes)
-    2. [Config HAProxy]()
-    3. [Config Kubeadm]()
-6. [Kiểm tra và xác thực](#kiểm-tra-và-xác-thực)
-7. [Tham khảo thêm](#tham-khảo-thêm)
+    2. [Config HAProxy](#2-config-haproxy)
+    3. [Config Kubeadm](#3-config-kubeadm)
+6. [Kiểm tra và xác thực](#bước-4-kiểm-tra-trạng-thái)
 
 ---
 
@@ -522,7 +521,16 @@ kind: KubeProxyConfiguration
 ### Bước 2: Initialize Kubernetes Cluster
 
 ```bash
-sudo kubeadm init --config=kubeadm-config.yaml
+kubeadm init --config kubeadm-config.yml --upload-certs
+```
+
+```plaintex
+kubeadm join 192.168.56.11:6443 --token 9a08jv.c0izixklcxtmnze7 \
+      --discovery-token-ca-cert-hash sha256:5e7d23aae85f344b2f042e4b975d3f5f14f1f460252f12de4a8a4bcd1abac3c6 \
+      --control-plane --certificate-key 10fc6bdd3cd8b4dd8cc1daf6937c9a02cf345055ef949654ce8e38d486298a8a
+
+kubeadm join 192.168.56.11:6443 --token 9a08jv.c0izixklcxtmnze7 \
+        --discovery-token-ca-cert-hash sha256:5e7d23aae85f344b2f042e4b975d3f5f14f1f460252f12de4a8a4bcd1abac3c6 
 ```
 
 ### Bước 3: Cấu hình `kubectl`
