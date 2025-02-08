@@ -45,13 +45,14 @@ Mô hình tổng thể:
 
 ## Chuẩn bị môi trường
 
-1. **Hệ điều hành**: Phổ biến là Linux (Ubuntu/CentOS/RHEL/...).  
-2. **Phiên bản Kubernetes**: Khuyến nghị từ Kubernetes 1.20 trở lên.
-3. **Phần cứng**: Mỗi node trong ETCD cluster cần tài nguyên tối thiểu (VD: 2 CPU, 2GB RAM, dùng SSD nếu có thể).  
-4. **Mạng**: Đảm bảo các node có thể kết nối với nhau qua cổng 2379 (cổng mặc định của ETCD) và 2380 (cổng peer).  
-5. **Công cụ**:
-   - **etcdctl**: công cụ quản trị ETCD.
-   - **kubectl**: công cụ quản trị Kubernetes (trên node Master).
+|     Name     |       IP      |   CPU  |  Ram   |     OS     |
+|:------------:|:-------------:|:------:|:------:|:----------:|
+| master-01    | 192.168.56.31 |  2CPU  |   4G   | CentOS 9   |
+| master-02    | 192.168.56.32 |  2CPU  |   4G   | CentOS 9   |
+| worker-01    | 192.168.56.51 |  2CPU  |   2G   | CentOS 9   |
+| worker-02    | 192.168.56.52 |  2CPU  |   2G   | CentOS 9   |
+| worker-03    | 192.168.56.53 |  2CPU  |   2G   | CentOS 9   |
+| loadbalancer | 192.168.56.11 |  2CPU  |   2G   | CentOS 9   |
 
 ---
 
@@ -59,8 +60,7 @@ Mô hình tổng thể:
 
 ### 1. Cài đặt ETCD
 
-- Trên **mỗi node ETCD** (giả sử các node đặt tên là `etcd-01`, `etcd-02`, `etcd-03`):<br>
-    > **Lưu ý**: Lệnh `sudo -i` dùng quyền cao nhất để cài đặt
+- Trên **mỗi node ETCD** (giả sử các node đặt tên là `etcd-01`, `etcd-02`, `etcd-03`)
 
     ```bash
     #!/bin/bash
@@ -69,10 +69,11 @@ Mô hình tổng thể:
 
     # Tắt Swap
     echo "---[ TURN OFF SWAP ]---"
+    sudo setenforce 0
     sudo swapoff -a
     sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
+    sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-    #ETCD Version Setup
     echo "ETCD VERSION: ${ETCD_VER}"
 
     # choose either URL
@@ -100,12 +101,14 @@ Mô hình tổng thể:
     # Xoá thư mục tạm
     echo "[ STEP 4 ] --- [ DELETE TEMPORARY FOLDER ]"
     sudo rm -rf /tmp/etcd-download-test
+    mkdir -p /var/lib/etcd
+    ```
 
-    # Kiểm tra phiên bản
-    echo "[ STEP 5 ] --- [ CHECK VESION ]"
+- Check kiểm tra version
+
+    ```bash
     etcd --version
     etcdctl version
-    etcdutl version
     ```
 
 ### 2. Cấu hình ETCD HA
