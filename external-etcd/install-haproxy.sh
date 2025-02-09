@@ -1,50 +1,59 @@
 #!/bin/bash
 set -xe
 
-sudo apt update
-sudo apt install haproxy -y
+# Cập nhật hệ thống và cài đặt HAProxy
+echo "[ SETUP AND SETTING HAPROXY ]"
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+sudo dnf update -y --quiet
+sudo dnf install -y --quiet haproxy
 sleep 2s
-sudo systemctl start haproxy && sudo systemctl enable haproxy
 
-sudo bash -c 'cat <<EOF | sudo tee /etc/haproxy/haproxy.cfg
+echo "[ ENABLE HAPROXY TO AUTOMATICALLY START ON REBOOT ]"
+sudo systemctl enable --now haproxy
+
+echo "[ CONFIGURATION HAPROXY ]" 
+cat <<'EOF' | sudo tee /etc/haproxy/haproxy.cfg >/dev/null
+global
+    # Send HAProxy logs to local syslog; adjust facility & level as needed
+    log /dev/log local0 info
+    maxconn 10000  # Adjust as appropriate
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+
+    timeout connect 10s
+    timeout client  10s
+    timeout server  10s
+    balance roundrobin
+    retries 3
+
 # Frontend cho Kubernetes API Server
 frontend kubernetes-frontend
-  bind *:6443
-  mode tcp
-  option tcplog
-  timeout client 10s
-  log global
-  default_backend kubernetes-backend
+    bind *:6443
+    default_backend kubernetes-backend
 
 # Backend cho Kubernetes API Server
 backend kubernetes-backend
-  mode tcp
-  timeout connect 10s
-  timeout server 10s
-  option tcp-check
-  balance roundrobin
-
-  server master-01 192.168.56.31:6443 check
-  server master-02 192.168.56.32:6443 check
+    option tcp-check
+    server master-01 192.168.56.31:6443 check
+    server master-02 192.168.56.32:6443 check
 
 # Frontend cho NodePort Services
 frontend nodeport-frontend
-  bind *:30000-35000
-  mode tcp
-  option tcplog
-  timeout client 10s
-  log global
-  default_backend nodeport-backend
+    bind *:30000-35000
+    default_backend nodeport-backend
 
 # Backend cho NodePort Services
 backend nodeport-backend
-  mode tcp
-  timeout connect 10s
-  timeout server 10s
-  balance roundrobin
+    server worker-01 192.168.56.51:30001
+    server worker-02 192.168.56.52:30002
+    server worker-03 192.168.56.53:30003
+EOF
 
-  server worker-01 192.168.56.51
-  server worker-02 192.168.56.52
-  server worker-03 192.168.56.53
-EOF'
+echo "[ CHECK STATUS HAPROXY ]" 
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
 sudo systemctl restart haproxy
+sudo systemctl status haproxy --no-pager
