@@ -1,77 +1,92 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 Vagrant.configure("2") do |config|
-
-    # Load Balancer Nodes
-    LoadBalancerCount = 1
-    (1..LoadBalancerCount).each do |i|
-        config.vm.define "lb-#{i}" do |lb|
-            config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            lb.vm.hostname = "lb-#{i}"
-            lb.vm.network "private_network", ip: "192.168.56.1#{i}"
-
-            lb.vm.provider "virtualbox" do |vb|
-                vb.name = "loadbalancer-#{i}"
-                vb.memory = 1024
-                vb.cpus = 1
-            end
-        end
+    ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+  
+    # Load Balancer Node
+    config.vm.define "loadbalancer" do |lb|
+      lb.vm.box = "oraclelinux/9"
+      lb.vm.box_check_update = false
+      lb.vm.hostname = "loadbalancer"
+      lb.vm.network "private_network", ip: "192.168.56.11"
+  
+      lb.vm.provider "virtualbox" do |vb|
+        vb.name = "loadbalancer"
+        vb.memory = 2024
+        vb.cpus = 2
+      end
+      lb.vm.provision "shell", path: "install-haproxy.sh", privileged: true
     end
-
-    # ECTD Nodes
+  
+    # ETCD Nodes
     ECTDCount = 3
     (1..ECTDCount).each do |i|
-        config.vm.define "etcd-#{i}" do |master|
-            config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            master.vm.hostname = "etcd-#{i}"
-            master.vm.network "private_network", ip: "192.168.56.2#{i}"
-
-            master.vm.provider "virtualbox" do |vb|
-                vb.name = "etcd-#{i}"
-                vb.memory = 2048
-                vb.cpus = 2
-            end
+      config.vm.define "etcd-#{i}" do |etcd|
+        etcd.vm.box = "oraclelinux/9"
+        etcd.vm.box_check_update = false
+        etcd.vm.hostname = "etcd-#{i}"
+        etcd.vm.network "private_network", ip: "192.168.56.2#{i}"
+  
+        etcd.vm.provider "virtualbox" do |vb|
+          vb.name = "etcd-#{i}"
+          vb.memory = 2024
+          vb.cpus = 2
         end
+        etcd.vm.provision "shell", path: "install-etcd.sh", privileged: true
+      end
     end
-
+  
     # Master Nodes
     MasterCount = 2
     (1..MasterCount).each do |i|
-        config.vm.define "master-#{i}" do |master|
-            config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            master.vm.hostname = "master-#{i}"
-            master.vm.network "private_network", ip: "192.168.56.3#{i}"
+      config.vm.define "master-0#{i}" do |master|
+        master.vm.box = "oraclelinux/9"
+        master.vm.box_check_update = false
+        master.vm.hostname = "master-#{i}"
+        master.vm.network "private_network", ip: "192.168.56.3#{i}"
   
-            master.vm.provider "virtualbox" do |vb|
-                vb.name = "master-#{i}"
-                vb.memory = 4048
-                vb.cpus = 2
-            end
+        master.vm.provider "virtualbox" do |vb|
+          vb.name = "master-0#{i}"
+          vb.memory = 4048
+          vb.cpus = 2
         end
+        master.vm.provision "shell", path: "install-kube.sh", privileged: true
+        master.vm.provision "shell", path: "config-hosts.sh", privileged: true
+      end
     end
   
     # Worker Nodes
     WorkerCount = 3
     (1..WorkerCount).each do |i|
-        config.vm.define "worker-#{i}" do |worker|
-            worker.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            worker.vm.hostname = "worker-#{i}"
-            worker.vm.network "private_network", ip: "192.168.56.5#{i}"
+      config.vm.define "worker-0#{i}" do |worker|
+        worker.vm.box = "oraclelinux/9"
+        worker.vm.box_check_update = false
+        worker.vm.hostname = "worker-0#{i}"
+        worker.vm.network "private_network", ip: "192.168.56.5#{i}"
   
-            worker.vm.provider "virtualbox" do |vb|
-                vb.name = "worker-#{i}"
-                vb.memory = 2048
-                vb.cpus = 2
-            end
+        worker.vm.provider "virtualbox" do |vb|
+          vb.name = "worker-0#{i}"
+          vb.memory = 2048
+          vb.cpus = 2
         end
+        worker.vm.provision "shell", path: "install-kube.sh", privileged: true
+      end
     end
   
-    config.vm.provision "shell" do |s|
-        ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
-        s.inline = <<-SHELL
-            useradd -s /bin/bash -d /home/ubuntu/ -m -G sudo ubuntu
-            echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-            mkdir -p /home/ubuntu/.ssh && chown -R ubuntu /home/ubuntu/.ssh
-            echo #{ssh_pub_key} >> /home/ubuntu/.ssh/authorized_keys
-        SHELL
-    end
-  
+    # Provisioning: Áp dụng cho tất cả các máy
+    config.vm.provision "shell", inline: <<-SHELL
+      if ! id "centos" >/dev/null 2>&1; then
+        useradd -m -s /bin/bash centos
+        echo "User centos created"
+      fi
+      mkdir -p /home/centos/.ssh
+      echo "#{ssh_pub_key}" >> /home/centos/.ssh/authorized_keys
+      chmod 700 /home/centos/.ssh
+      chmod 600 /home/centos/.ssh/authorized_keys
+      chown -R centos:centos /home/centos/.ssh
+      echo "#{ssh_pub_key}" >> /root/.ssh/authorized_keys
+      echo "SSH public key added!"
+    SHELL
   end
+  

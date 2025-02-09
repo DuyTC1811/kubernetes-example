@@ -1,10 +1,12 @@
 #!/bin/bash
 
-echo "[ STEP 0 ] ---[ TURN OFF SWAP ]"
-sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
+echo "[ STEP 0 ] --- [ TURN OFF SWAP ]"
+sudo setenforce 0
 sudo swapoff -a
+sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-echo "[ STEP 1 ] ---[ LOAD KERNEL MODULES ]"
+echo "[ STEP 1 ] --- [ LOAD KERNEL MODULES ]"
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
@@ -18,40 +20,35 @@ net.ipv4.ip_forward = 1
 EOF
 sudo sysctl --system
 
-echo "[ STEP 3 ] --- [ VERIFY THAT NET.IPV4.IP_FORWARD IS SET TO 1 WITH ]"
+echo "[ STEP 3 ] --- [ VERIFY THAT NET.IPV4.IP_FORWARD IS SET TO 1 ]"
 sysctl net.ipv4.ip_forward
 
-echo "[ STEP 3 ] --- [ INSTALLING CONTAINERD ]"
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates curl gpg socat
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y containerd.io
-containerd config default > /etc/containerd/config.toml
-sudo systemctl restart containerd
-sudo systemctl enable containerd
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-sudo systemctl restart containerd
-
-echo "[ STEP 4 ] --- [ INSTALLING KUBERNETES ]"
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
-
-echo "[ STEP 5 ] --- [ AND PIN THEIR VERSION ]"
-sudo apt-mark hold kubelet kubeadm kubectl
-sudo systemctl enable --now kubelet
-
-echo "[ STEP 6 ] --- [ UPDATE PAUSE 3.10 ]"
+echo "[ STEP 4 ] --- [ INSTALLING CONTAINERD ]"
+sudo dnf install -y --quiet dnf-plugins-core
+sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+sudo dnf install -y --quiet containerd.io
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
 sudo sed -i 's|sandbox_image = ".*"|sandbox_image = "registry.k8s.io/pause:3.10"|' /etc/containerd/config.toml
 grep "sandbox_image" /etc/containerd/config.toml
 sudo systemctl restart containerd
+sudo systemctl enable --now containerd
+sudo systemctl status containerd
 
+echo "[ STEP 5 ] --- [ INSTALLING KUBERNETES ]"
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
+exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+EOF
+
+sudo dnf install -y --quiet kubelet kubeadm kubectl --disableexcludes=kubernetes
+sudo systemctl enable --now kubelet
+
+echo "[ STEP 7 ] --- [ CREATING DIRECTORY FOR ETCD ]"
 mkdir -vp /etcd/kubernetes/pki/etcd/

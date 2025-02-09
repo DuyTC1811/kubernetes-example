@@ -48,9 +48,9 @@ frontend nodeport-frontend
 
 # Backend cho NodePort Services
 backend nodeport-backend
-    server worker-01 192.168.56.51:30001
-    server worker-02 192.168.56.52:30002
-    server worker-03 192.168.56.53:30003
+    server worker-01 192.168.56.51
+    server worker-02 192.168.56.52
+    server worker-03 192.168.56.53
 EOF
 
 echo "[ CHECK STATUS HAPROXY ]" 

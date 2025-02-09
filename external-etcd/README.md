@@ -116,7 +116,7 @@ Mô hình tổng thể:
 
 ### 2. Cấu hình ETCD HA
 
-1. **Tạo thư mục chứa chứng chỉ**:
+1. **Tạo thư mục chứa chứng chỉ ở máy local của bạn**:
 
     ```bash
     CERT_DIR="openssl"
@@ -131,7 +131,7 @@ Mô hình tổng thể:
         openssl genrsa -out ca-key.pem 2048
         ```
 
-        - **Mục đích:** Tạo khóa riêng (private key) cho CA, được lưu trong file `ca-key.pem`.
+        - Tạo khóa riêng (private key) cho CA, được lưu trong file `ca-key.pem`.
         - **Dung lượng khóa:** 2048-bit.
 
     - Tạo yêu cầu ký chứng chỉ (CSR) cho CA:
@@ -140,7 +140,7 @@ Mô hình tổng thể:
         openssl req -new -key ca-key.pem -out ca-csr.pem -subj "/C=VN/ST=Metri/L=Hanoi/O=example/CN=ca"
         ```
 
-        - **Mục đích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
+        - **Giải thích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
             - `C=VN`: Quốc gia (Vietnam).
             - `ST=Metri`: Bang/Tỉnh.
             - `L=Hanoi`: Thành phố.
@@ -153,9 +153,8 @@ Mô hình tổng thể:
         openssl x509 -req -in ca-csr.pem -out ca.pem -days 3650 -signkey ca-key.pem -sha256
         ```
 
-        - **Mục đích:** Ký chứng chỉ cho CA.
         - **Thời hạn:** 3650 ngày (~10 năm).
-        - **Kết quả:** Tạo file chứng chỉ CA `ca.pem`.
+        - Tạo file chứng chỉ CA `ca.pem`.
 
 3. **Tạo khóa riêng và CSR cho ETCD**:
     - Tạo khóa riêng cho ETCD:
@@ -163,8 +162,6 @@ Mô hình tổng thể:
         ```bash
         openssl genrsa -out etcd-key.pem 2048
         ```
-
-        - **Mục đích:** Tạo khóa riêng (private key) cho ETCD.
 
     - Tạo yêu cầu ký chứng chỉ (CSR) cho ETCD:
 
@@ -178,7 +175,6 @@ Mô hình tổng thể:
     echo "subjectAltName = DNS:localhost,IP:192.168.56.21,IP:192.168.56.22,IP:192.168.56.23,IP:127.0.0.1" > extfile.cnf
     ```
 
-    - **Mục đích:** Xác định các tên miền (DNS) và địa chỉ IP hợp lệ cho chứng chỉ.
     - **Nội dung SAN:**
         - **DNS:** `localhost`.
         - **IP:** `192.168.56.21`, `192.168.56.22`, `192.168.56.23`, `127.0.0.1`.
@@ -189,26 +185,10 @@ Mô hình tổng thể:
     openssl x509 -req -in etcd-csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 3650 -out etcd.pem -sha256 -extfile extfile.cnf
     ```
 
-    - **Mục đích:** Ký chứng chỉ cho ETCD (`etcd.pem`) bằng CA (`ca.pem` và `ca-key.pem`).
     - **Thời hạn:** 3650 ngày (~10 năm).
-    - **File kết quả:**
-        - `etcd.pem`: Chứng chỉ ETCD.
-        - `ca.srl`: File serial lưu số serial của chứng chỉ.
+    - **File kết quả:** `etcd.pem`: Chứng chỉ ETCD. `ca.srl`: File serial lưu số serial của chứng chỉ.
 
-6. **Hiển thị thông báo hoàn thành**:
-
-    ```bash
-    echo "Certificates have been successfully created in the '${CERT_DIR}' directory."
-    echo "Generated files:"
-    echo "  - ca.pem        (CA certificate)"
-    echo "  - ca-key.pem    (CA private key)"
-    echo "  - etcd.pem      (etcd certificate)"
-    echo "  - etcd-key.pem  (etcd private key)"
-    echo "  - extfile.cnf   (SAN configuration)"
-    ls -l "${CERT_DIR}"
-    ```
-
-7. **Sao chép chứng chỉ đến các node**:
+6. **Sao chép chứng chỉ đến các node**:
 
     ```bash
     scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
@@ -341,14 +321,14 @@ mkdir -vp /etcd/kubernetes/pki/etcd/
 ### Bước 2: Đặt tên hostname
 
 ```bash
-sudo bash -c 'cat <<EOF >>/etc/hosts
+cat <<EOF | sudo tee -a /etc/hosts
 192.168.56.31 master-01
 192.168.56.32 master-02
 192.168.56.51 worker-01
 192.168.56.52 worker-02
 192.168.56.53 worker-03
 192.168.56.11 loadbalancer
-EOF'
+EOF
 reboot
 ```
 
@@ -492,14 +472,8 @@ kubernetesVersion: "v1.32.0"
 controlPlaneEndpoint: "192.168.56.11:6443"
 
 apiServer:
-  extraArgs:
-    - name: authorization-mode
-      value: Node,RBAC
-
   # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
   certSANs:
-    - "192.168.56.31"               # Địa chỉ IP Private của server
-    - "master-01"                   # Tên DNS hoặc hostname
     - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
     - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
 
@@ -515,19 +489,6 @@ dns:
   disabled: true  # disable CoreDNS
 proxy:
   disabled: true   # disable kube-proxy
-
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-# kubelet specific options here
-# (Giữ nguyên hoặc tuỳ chỉnh theo nhu cầu)
-
----
-apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
-# kube-proxy specific options here
-# (Giữ nguyên hoặc tuỳ chỉnh theo nhu cầu)
-
 ```
 
 ### Bước 2: Initialize Kubernetes Cluster
@@ -536,13 +497,18 @@ kind: KubeProxyConfiguration
 kubeadm init --config kubeadm-config.yml --upload-certs
 ```
 
+- Bạn sẽ thấy sau khi init hệ thống sẽ trả 2 token
+  - 1 control-plane
+  - 2 là worker-node
+  
 ```plaintex
-kubeadm join 192.168.56.11:6443 --token 9a08jv.c0izixklcxtmnze7 \
-      --discovery-token-ca-cert-hash sha256:5e7d23aae85f344b2f042e4b975d3f5f14f1f460252f12de4a8a4bcd1abac3c6 \
-      --control-plane --certificate-key 10fc6bdd3cd8b4dd8cc1daf6937c9a02cf345055ef949654ce8e38d486298a8a
+token dùng để join control-plane
 
-kubeadm join 192.168.56.11:6443 --token 9a08jv.c0izixklcxtmnze7 \
-        --discovery-token-ca-cert-hash sha256:5e7d23aae85f344b2f042e4b975d3f5f14f1f460252f12de4a8a4bcd1abac3c6 
+kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:*** --control-plane --certificate-key ***
+
+token dùng để join worker-node
+
+kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:***
 ```
 
 ### Bước 3: Cấu hình `kubectl`
@@ -555,9 +521,15 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 ### Bước 4: Kiểm tra trạng thái
 
-```bash
+```plaintex
 kubectl get nodes
-kubectl get pods -A
+
+NAME        STATUS      ROLES           AGE   VERSION
+master-01   NotReady    control-plane   16h   v1.32.1
+master-2    NotReady    control-plane   16h   v1.32.1
+worker-01   NotReady    <none>          16h   v1.32.1
+worker-02   NotReady    <none>          16h   v1.32.1
+worker-03   NotReady    <none>          16h   v1.32.1
 ```
 
 ---

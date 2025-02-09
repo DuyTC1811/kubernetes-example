@@ -3,8 +3,10 @@ set -xe
 ETCD_VER=v3.5.17
 
 echo "---[ TURN OFF SWAP ]---"
+sudo setenforce 0
 sudo swapoff -a
 sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
 echo "ETCD VERSION: ${ETCD_VER}"
 
@@ -29,9 +31,4 @@ sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
 
 echo "[ STEP 4 ] --- [ DELETE TEMPORARY FOLDER ]"
 sudo rm -rf /tmp/etcd-download-test
-
-echo "[ STEP 5 ] --- [ CHECK VESION ]"
-etcd --version
-etcdctl version
-etcdutl version
 mkdir -p /var/lib/etcd

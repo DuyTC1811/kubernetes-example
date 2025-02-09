@@ -59,14 +59,8 @@ kubernetesVersion: "v1.32.0"
 controlPlaneEndpoint: "192.168.56.11:6443"
 
 apiServer:
-  extraArgs:
-    - name: authorization-mode
-      value: Node,RBAC
-
   # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
   certSANs:
-    - "192.168.56.31"               # Địa chỉ IP Private của server
-    - "master-01"                   # Tên DNS hoặc hostname
     - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
     - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
 
@@ -82,15 +76,3 @@ dns:
   disabled: true  # disable CoreDNS
 proxy:
   disabled: true   # disable kube-proxy
-
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-# kubelet specific options here
-# (Giữ nguyên hoặc tuỳ chỉnh theo nhu cầu)
-
----
-apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
-# kube-proxy specific options here
-# (Giữ nguyên hoặc tuỳ chỉnh theo nhu cầu)
