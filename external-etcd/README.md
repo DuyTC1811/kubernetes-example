@@ -7,11 +7,7 @@
 4. [General certificate](#chuẩn-bị-môi-trường)
 5. [Setup Loadbalance](#setup-loadbalance)
 6. [Setup cluster ETCD](#setup-and-config-cluster-etcd)
-7. [Setup Kubernetes](#5-cấu-hình-kubernetes-master-trỏ-tới-etcd)
-    1. [Cài Kubernetes](#1-cài-kubernetes)
-    2. [Config HAProxy](#2-config-haproxy)
-    3. [Config Kubeadm](#3-config-kubeadm)
-    4. [Kiểm tra và xác thực](#bước-4-kiểm-tra-trạng-thái)
+7. [Setup Kubernetes](#setup-kubernetes)
 
 ---
 
@@ -93,7 +89,7 @@ Mô hình tổng thể:
 
     ```
 
-      > **Giải thích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
+      > **NOTE:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
           >>- `C=VN`: Quốc gia (Vietnam).
           >>- `ST=Metri`: Bang/Tỉnh.
           >>- `L=Hanoi`: Thành phố.
@@ -165,48 +161,41 @@ Mô hình tổng thể:
 ## Setup and config cluster ETCD
 
 - 1: Setup ETCD
-  - (etcd-01) `192.168.56.21`
-  - (etcd-02) `192.168.56.22`
-  - (etcd-03) `192.168.56.23`
 
-    ```bash
-    ETCD_VER=v3.5.17
-    sudo setenforce 0
-    sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+  ```bash
+  echo "[ TURN OFF SELINUX ]"
+  sudo setenforce 0
+  sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+  echo "ETCD VERSION: ${ETCD_VER}"
 
-    echo "ETCD VERSION: ${ETCD_VER}"
+  # choose either URL
+  GOOGLE_URL=https://storage.googleapis.com/etcd
+  GITHUB_URL=https://github.com/etcd-io/etcd/releases/download
+  DOWNLOAD_URL=${GOOGLE_URL}
 
-    # choose either URL
-    GOOGLE_URL=https://storage.googleapis.com/etcd
-    GITHUB_URL=https://github.com/etcd-io/etcd/releases/download
-    DOWNLOAD_URL=${GOOGLE_URL}
+  echo "[ CLEAN UP AND PREPARE TEMPORARY FOLDER ]"
+  sudo rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+  sudo rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
 
-    # Chuẩn bị thư mục tạm thời
-    echo "[ STEP 1 ] --- [ CLEAN UP AND PREPARE TEMPORARY FOLDER ]"
-    sudo rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
-    sudo rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
+  echo "[ DOWNLOAD AND UNZIP ETCD ]"
+  curl -L ${DOWNLOAD_URL}/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+  tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz -C /tmp/etcd-download-test --strip-components=1
+  sudo rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
 
-    # Tải xuống và giải nén ETCD
-    echo "[ STEP 2 ] --- [ DOWNLOAD AND UNZIP ETCD ]"
-    curl -L ${DOWNLOAD_URL}/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
-    tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz -C /tmp/etcd-download-test --strip-components=1
-    sudo rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+  echo "[ STEP 3 ] --- [ MOVE EXECUTABLE FILES TO SYSTEM FOLDER ]"
+  sudo mv -v /tmp/etcd-download-test/etcd /usr/local/bin
+  sudo mv -v /tmp/etcd-download-test/etcdctl /usr/local/bin
+  sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
 
-    # Di chuyển file thực thi vào thư mục hệ thống
-    echo "[ STEP 3 ] --- [ MOVE EXECUTABLE FILES TO SYSTEM FOLDER ]"
-    sudo mv -v /tmp/etcd-download-test/etcd /usr/local/bin
-    sudo mv -v /tmp/etcd-download-test/etcdctl /usr/local/bin
-    sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
+  echo "[ DELETE TEMPORARY FOLDER ]"
+  sudo rm -rf /tmp/etcd-download-test
+  mkdir -p /var/lib/etcd
+  ```
 
-    # Xoá thư mục tạm
-    echo "[ STEP 4 ] --- [ DELETE TEMPORARY FOLDER ]"
-    sudo rm -rf /tmp/etcd-download-test
-    mkdir -p /var/lib/etcd
-
-    # Check Version
-    etcd --version
-    etcdctl version
-    ```
+  > **NOTE:** Setup:
+  > (etcd-01) `192.168.56.21`
+  > (etcd-02) `192.168.56.22`
+  > (etcd-03) `192.168.56.23`
 
 - 2: Sao chép chứng chỉ đến các node
 
@@ -216,45 +205,45 @@ Mô hình tổng thể:
     scp -i ~/.ssh/id_rsa ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
     ```
 
-  > Note: `~/.ssh/id_rsa`: Đường dẫn tới private key để kết nối qua SSH. `root@192.168.56.x`: Địa chỉ IP của các node ETCD. `/var/lib/etcd`: Thư mục trên node từ xa để lưu chứng chỉ.
+  > Note:`~/.ssh/id_rsa`: Đường dẫn tới private key `root@192.168.56.x`: Địa chỉ IP `/var/lib/etcd`: Thư mục trên node.
 
-- 3:**Tạo file `etcd.service` trên mỗi node**:
-  - Tạo file `/etc/systemd/system/etcd.service`:
+- 3:**Tạo file** `etcd.service` (etcd-01) `192.168.56.21` (etcd-01) `192.168.56.22` (etcd-01) `192.168.56.23`:
+  > Note: thay thế `--name` `--initial-advertise-peer-urls` `--listen-peer-urls` `--listen-client-urls` `--advertise-client-urls` Tương ứng mỗi node
 
-      ```bash
-      cat <<EOF > /etc/systemd/system/etcd.service
-          [Unit]
-          Description=etcd
-          [Service]
-          ExecStart=/usr/local/bin/etcd \\
-          --name etcd-01 \\                                            # Tên của node trong cụm etcd
-          --initial-advertise-peer-urls https://192.168.56.21:2380 \\  # URL để cho biết các node khác có thể kết nối qua Ip này
-          --listen-peer-urls https://192.168.56.21:2380 \\             # URL để lắng nghe kết nối từ các node khác trong cụm
-          --listen-client-urls https://192.168.56.21:2379,https://127.0.0.1:2379 \\ # URL để lắng nghe các kết nối từ client
-          --advertise-client-urls https://192.168.56.21:2379 \\        # URL quảng cáo cho client kết nối
-          --initial-cluster-token etcd-cluster-1 \\                    # Token nhận diện cụm etcd
-          # Danh sách các node trong cụm và địa chỉ peer
-          --initial-cluster etcd-01=https://192.168.56.21:2380,etcd-02=https://192.168.56.22:2380,etcd-03=https://192.168.56.23:2380 \\
-          --log-outputs=/var/lib/etcd/etcd.log \\                      # File log của etcd
-          --initial-cluster-state new \\                               # Trạng thái ban đầu của cụm (new/existing)
-          --peer-auto-tls \\                                           # Kích hoạt tự động tạo TLS giữa các node trong cụm
-          --snapshot-count '10000' \\                                  # Số lượng thay đổi trước khi tạo snapshot
-          --wal-dir=/var/lib/etcd/wal \\                               # Thư mục lưu trữ WAL (Write-Ahead Log)
-          --client-cert-auth \\                                        # Kích hoạt xác thực client bằng chứng chỉ
-          --trusted-ca-file=/var/lib/etcd/ca.pem \\                    # File CA dùng để xác thực client
-          --cert-file=/var/lib/etcd/etcd.pem \\                        # File chứng chỉ của etcd server
-          --key-file=/var/lib/etcd/etcd-key.pem \\                     # File khóa riêng của etcd server
-          --data-dir=/var/lib/etcd/data                                # Thư mục lưu trữ dữ liệu của etcd
-          Restart=on-failure                                           # Tự động khởi động lại nếu service gặp lỗi
-          RestartSec=5                                                 # Thời gian chờ trước khi khởi động lại (5 giây)
+    ```bash
+    cat <<EOF > /etc/systemd/system/etcd.service
+        [Unit]
+        Description=etcd
+        [Service]
+        ExecStart=/usr/local/bin/etcd \\
+        --name etcd-01 \\                                            # Tên của node trong cụm etcd
+        --initial-advertise-peer-urls https://192.168.56.21:2380 \\  # URL để cho biết các node khác có thể kết nối qua Ip này
+        --listen-peer-urls https://192.168.56.21:2380 \\             # URL để lắng nghe kết nối từ các node khác trong cụm
+        --listen-client-urls https://192.168.56.21:2379,https://127.0.0.1:2379 \\ # URL để lắng nghe các kết nối từ client
+        --advertise-client-urls https://192.168.56.21:2379 \\        # URL quảng cáo cho client kết nối
+        --initial-cluster-token etcd-token \\                        # Token nhận diện cụm etcd
+        # Danh sách các node trong cụm và địa chỉ peer
+        --initial-cluster etcd-01=https://192.168.56.21:2380,etcd-02=https://192.168.56.22:2380,etcd-03=https://192.168.56.23:2380 \\
+        --log-outputs=/var/lib/etcd/etcd.log \\                      # File log của etcd
+        --initial-cluster-state new \\                               # Trạng thái ban đầu của cụm (new/existing)
+        --peer-auto-tls \\                                           # Kích hoạt tự động tạo TLS giữa các node trong cụm
+        --snapshot-count '10000' \\                                  # Số lượng thay đổi trước khi tạo snapshot
+        --wal-dir=/var/lib/etcd/wal \\                               # Thư mục lưu trữ WAL (Write-Ahead Log)
+        --client-cert-auth \\                                        # Kích hoạt xác thực client bằng chứng chỉ
+        --trusted-ca-file=/var/lib/etcd/ca.pem \\                    # File CA dùng để xác thực client
+        --cert-file=/var/lib/etcd/etcd.pem \\                        # File chứng chỉ của etcd server
+        --key-file=/var/lib/etcd/etcd-key.pem \\                     # File khóa riêng của etcd server
+        --data-dir=/var/lib/etcd/data                                # Thư mục lưu trữ dữ liệu của etcd
+        Restart=on-failure                                           # Tự động khởi động lại nếu service gặp lỗi
+        RestartSec=5                                                 # Thời gian chờ trước khi khởi động lại (5 giây)
 
-          [Install]
-          WantedBy=multi-user.target                                   # Dịch vụ sẽ được khởi động trong chế độ multi-user (chế độ server)
-          EOF
-          sudo systemctl daemon-reload
-          sudo systemctl enable etcd
-          sudo systemctl start etcd
-      ```
+        [Install]
+        WantedBy=multi-user.target                                   # Dịch vụ sẽ được khởi động trong chế độ multi-user (chế độ server)
+        EOF
+        sudo systemctl daemon-reload
+        sudo systemctl enable etcd
+        sudo systemctl start etcd
+    ```
 
 - 4: Kiểm tra hoạt động ETCD
 
@@ -272,15 +261,9 @@ Mô hình tổng thể:
     +----------------------------+--------+------------+-------+
     ```
 
-## 5. Cấu hình Kubernetes Master trỏ tới ETCD
-
-## 1. Cài Kubernetes
-
-### Bước 1: Cài đặt các gói cần thiết
+### Setup Kubernetes
 
 ```bash
-#!/bin/bash
-
 echo "[ STEP 0 ] --- [ TURN OFF SWAP ]"
 sudo setenforce 0
 sudo swapoff -a
