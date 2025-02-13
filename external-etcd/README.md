@@ -263,198 +263,203 @@ Mô hình tổng thể:
 
 ### Setup Kubernetes
 
-```bash
-echo "[ STEP 0 ] --- [ TURN OFF SWAP ]"
-sudo setenforce 0
-sudo swapoff -a
-sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
-sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+- 1: Setup Kubernetes `192.168.56.31` `192.168.56.32` `192.168.56.51` `192.168.56.52` `192.168.56.53`
 
-echo "[ STEP 1 ] --- [ LOAD KERNEL MODULES ]"
-cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
-overlay
-br_netfilter
-EOF
-sudo modprobe overlay
-sudo modprobe br_netfilter
+  ```bash
+  echo "[ STEP 0 ] --- [ TURN OFF SWAP ]"
+  sudo setenforce 0
+  sudo swapoff -a
+  sudo sed -i 's|^\(/swap\.img.*\)|# \1|' /etc/fstab
+  sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-echo "[ STEP 2 ] --- [ SET IP FORWARDING ]"
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
-net.ipv4.ip_forward = 1
-EOF
-sudo sysctl --system
+  echo "[ STEP 1 ] --- [ LOAD KERNEL MODULES ]"
+  cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+  overlay
+  br_netfilter
+  EOF
+  sudo modprobe overlay
+  sudo modprobe br_netfilter
 
-echo "[ STEP 3 ] --- [ VERIFY THAT NET.IPV4.IP_FORWARD IS SET TO 1 ]"
-sysctl net.ipv4.ip_forward
+  echo "[ STEP 2 ] --- [ SET IP FORWARDING ]"
+  cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+  net.ipv4.ip_forward = 1
+  EOF
+  sudo sysctl --system
 
-echo "[ STEP 4 ] --- [ INSTALLING CONTAINERD ]"
-sudo dnf install -y --quiet dnf-plugins-core
-sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-sudo dnf install -y --quiet containerd.io
-sudo mkdir -p /etc/containerd
-containerd config default | sudo tee /etc/containerd/config.toml
-sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-sudo sed -i 's|sandbox_image = ".*"|sandbox_image = "registry.k8s.io/pause:3.10"|' /etc/containerd/config.toml
-grep "sandbox_image" /etc/containerd/config.toml
-sudo systemctl restart containerd
-sudo systemctl enable --now containerd
-sudo systemctl status containerd
+  echo "[ STEP 3 ] --- [ VERIFY THAT NET.IPV4.IP_FORWARD IS SET TO 1 ]"
+  sysctl net.ipv4.ip_forward
 
-echo "[ STEP 5 ] --- [ INSTALLING KUBERNETES ]"
-cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
-enabled=1
-gpgcheck=1
-gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
-exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
-EOF
+  echo "[ STEP 4 ] --- [ INSTALLING CONTAINERD ]"
+  sudo dnf install -y --quiet dnf-plugins-core
+  sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+  sudo dnf install -y --quiet containerd.io
+  sudo mkdir -p /etc/containerd
+  containerd config default | sudo tee /etc/containerd/config.toml
+  sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+  sudo sed -i 's|sandbox_image = ".*"|sandbox_image = "registry.k8s.io/pause:3.10"|' /etc/containerd/config.toml
+  grep "sandbox_image" /etc/containerd/config.toml
+  sudo systemctl restart containerd
+  sudo systemctl enable --now containerd
+  sudo systemctl status containerd
 
-sudo dnf install -y --quiet kubelet kubeadm kubectl --disableexcludes=kubernetes
-sudo systemctl enable --now kubelet
+  echo "[ STEP 5 ] --- [ INSTALLING KUBERNETES ]"
+  cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+  [kubernetes]
+  name=Kubernetes
+  baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+  enabled=1
+  gpgcheck=1
+  gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
+  exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+  EOF
 
-echo "[ STEP 7 ] --- [ CREATING DIRECTORY FOR ETCD ]"
-mkdir -vp /etcd/kubernetes/pki/etcd/
-```
+  sudo dnf install -y --quiet kubelet kubeadm kubectl --disableexcludes=kubernetes
+  sudo systemctl enable --now kubelet
 
-### Bước 2: Đặt tên hostname
+  echo "[ STEP 7 ] --- [ CREATING DIRECTORY FOR ETCD ]"
+  mkdir -vp /etcd/kubernetes/pki/etcd/
 
-```bash
-cat <<EOF | sudo tee -a /etc/hosts
-192.168.56.31 master-01
-192.168.56.32 master-02
-192.168.56.51 worker-01
-192.168.56.52 worker-02
-192.168.56.53 worker-03
-192.168.56.11 loadbalancer
-EOF
-reboot
-```
+  cat <<EOF | sudo tee -a /etc/hosts
+  192.168.56.31 master-01
+  192.168.56.32 master-02
+  192.168.56.51 worker-01
+  192.168.56.52 worker-02
+  192.168.56.53 worker-03
+  192.168.56.11 loadbalancer
+  EOF
+  reboot
+  ```
 
-## 3. Config Kubeadm
+- 2: Sao chép chứng chỉ đến các node master
 
-### Bước 1: Tạo file cấu hình Node master
+    ```bash
+    scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.31:/etcd/kubernetes/pki/etcd
+    scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.32:/etcd/kubernetes/pki/etcd
+    ```
 
-Tạo file với nội dung như sau: `sudo touch kubeadm-config.yaml`
+- 3: Tạo file cấu hình Node master: `sudo touch kubeadm-config.yaml`
 
-```yaml
-apiVersion: kubeadm.k8s.io/v1beta4
-kind: InitConfiguration
-bootstrapTokens:
-  - token: "9a08jv.c0izixklcxtmnze7"
-    description: "kubeadm bootstrap token"
-    ttl: "24h"
-  - token: "783bde.3f89s0fje9f38fhf"
-    description: "another bootstrap token"
-    usages:
-      - authentication
-      - signing
-    groups:
-      - system:bootstrappers:kubeadm:default-node-token
+  ```yaml
+  apiVersion: kubeadm.k8s.io/v1beta4
+  kind: InitConfiguration
+  bootstrapTokens:
+    - token: "9a08jv.c0izixklcxtmnze7"
+      description: "kubeadm bootstrap token"
+      ttl: "24h"
+    - token: "783bde.3f89s0fje9f38fhf"
+      description: "another bootstrap token"
+      usages:
+        - authentication
+        - signing
+      groups:
+        - system:bootstrappers:kubeadm:default-node-token
 
-nodeRegistration:
-  name: "master-01"
-  criSocket: "unix:///var/run/containerd/containerd.sock"
-  taints: []
-  ignorePreflightErrors:
-    - IsPrivilegedUser
-  imagePullPolicy: "IfNotPresent"
+  nodeRegistration:
+    name: "master-01"
+    criSocket: "unix:///var/run/containerd/containerd.sock"
+    taints: []
+    ignorePreflightErrors:
+      - IsPrivilegedUser
+    imagePullPolicy: "IfNotPresent"
 
-localAPIEndpoint:
-  advertiseAddress: "192.168.56.31" # Địa chỉ IP của server control plane
-  bindPort: 6443                    # Cổng mặc định API server
+  localAPIEndpoint:
+    advertiseAddress: "192.168.56.31" # Địa chỉ IP của server control plane
+    bindPort: 6443                    # Cổng mặc định API server
 
-certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01" # Được lấy từ "kubeadm certs certificate-key"
+  certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01" # Được lấy từ "kubeadm certs certificate-key"
 
-# skipPhases:
-#   - preflight       # Bỏ qua kiểm tra ban đầu
-#   - kubelet-start   # Không khởi động kubelet
-#   - certs           # Bỏ qua tạo chứng chỉ
+  # skipPhases:
+  #   - preflight       # Bỏ qua kiểm tra ban đầu
+  #   - kubelet-start   # Không khởi động kubelet
+  #   - certs           # Bỏ qua tạo chứng chỉ
 
-timeouts:
-  controlPlaneComponentHealthCheck: "60s" # Chờ 120 giây kiểm tra thành phần control plane
+  timeouts:
+    controlPlaneComponentHealthCheck: "60s" # Chờ 120 giây kiểm tra thành phần control plane
 
----
-apiVersion: kubeadm.k8s.io/v1beta4
-kind: ClusterConfiguration
+  ---
+  apiVersion: kubeadm.k8s.io/v1beta4
+  kind: ClusterConfiguration
 
-etcd:
-  external:
-    endpoints:
-      - "https://192.168.56.21:2379"
-      - "https://192.168.56.22:2379"
-      - "https://192.168.56.23:2379"
-    caFile: "/etcd/kubernetes/pki/etcd/ca.pem"
-    certFile: "/etcd/kubernetes/pki/etcd/etcd.pem"
-    keyFile: "/etcd/kubernetes/pki/etcd/etcd-key.pem"
+  etcd:
+    external:
+      endpoints:
+        - "https://192.168.56.21:2379"
+        - "https://192.168.56.22:2379"
+        - "https://192.168.56.23:2379"
+      caFile: "/etcd/kubernetes/pki/etcd/ca.pem"
+      certFile: "/etcd/kubernetes/pki/etcd/etcd.pem"
+      keyFile: "/etcd/kubernetes/pki/etcd/etcd-key.pem"
 
-networking:
-  serviceSubnet: "10.96.0.0/16"  # Dải địa chỉ cho ClusterIP Services
-  podSubnet: "192.168.0.0/16"    # Dải địa chỉ cho Pods, tùy chỉnh theo yêu cầu
-  dnsDomain: "cluster.local"     # Tên miền DNS nội bộ
+  networking:
+    serviceSubnet: "10.96.0.0/16"  # Dải địa chỉ cho ClusterIP Services
+    podSubnet: "192.168.0.0/16"    # Dải địa chỉ cho Pods, tùy chỉnh theo yêu cầu
+    dnsDomain: "cluster.local"     # Tên miền DNS nội bộ
 
-kubernetesVersion: "v1.32.0"
+  kubernetesVersion: "v1.32.0"
 
-# Thay giá trị này bằng IP và cổng của LoadBalancer/Public IP OR Private IP
-controlPlaneEndpoint: "192.168.56.11:6443"
+  # Thay giá trị này bằng IP và cổng của LoadBalancer/Public IP OR Private IP
+  controlPlaneEndpoint: "192.168.56.11:6443"
 
-apiServer:
-  # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
-  certSANs:
-    - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
-    - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
+  apiServer:
+    # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
+    certSANs:
+      - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
+      - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
 
-controllerManager: {}
-scheduler: {}
+  controllerManager: {}
+  scheduler: {}
 
-certificatesDir: "/etc/kubernetes/pki"        # Thư mục lưu chứng chỉ TLS
-imageRepository: "registry.k8s.io"            # Registry chính thức để tải image Kubernetes
-clusterName: "dev-master"                     # Tên cluster (nên thay đổi phù hợp)
-encryptionAlgorithm: ECDSA-P256               # Thuật toán mã hóa TLS (khuyến nghị)
+  certificatesDir: "/etc/kubernetes/pki"        # Thư mục lưu chứng chỉ TLS
+  imageRepository: "registry.k8s.io"            # Registry chính thức để tải image Kubernetes
+  clusterName: "dev-master"                     # Tên cluster (nên thay đổi phù hợp)
+  encryptionAlgorithm: ECDSA-P256               # Thuật toán mã hóa TLS (khuyến nghị)
 
-dns:
-  disabled: true  # disable CoreDNS
-proxy:
-  disabled: true   # disable kube-proxy
-```
+  dns:
+    disabled: true  # disable CoreDNS
+  proxy:
+    disabled: true   # disable kube-proxy
+  ```
 
-### Bước 2: Initialize Kubernetes Cluster
+- 3: Initialize Kubernetes Cluster
 
-```bash
-kubeadm init --config kubeadm-config.yml --upload-certs
-```
+  ```bash
+  kubeadm init --config kubeadm-config.yml --upload-certs
+  ```
   
-```plaintex
-token dùng để join control-plane
+  Sau chạy câu lệnh `kubeadm init --config kubeadm-config.yml --upload-certs` sẽ generate token để joi các node vào với nhau
 
-kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:*** --control-plane --certificate-key ***
+  ```plaintex
+  token dùng để join control-plane
 
-token dùng để join worker-node
+  kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:*** --control-plane --certificate-key ***
 
-kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:***
-```
+  token dùng để join worker-node
 
-### Bước 3: Cấu hình `kubectl`
+  kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:***
+  ```
 
-```bash
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-```
+  Cấu hình `kubectl`
 
-### Bước 4: Kiểm tra trạng thái
+  ```bash
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  ```
 
-```plaintex
-kubectl get nodes
+  Kiểm tra trạng thái
 
-NAME        STATUS      ROLES           AGE   VERSION
-master-01   NotReady    control-plane   16h   v1.32.1
-master-2    NotReady    control-plane   16h   v1.32.1
-worker-01   NotReady    <none>          16h   v1.32.1
-worker-02   NotReady    <none>          16h   v1.32.1
-worker-03   NotReady    <none>          16h   v1.32.1
-```
+  ```plaintex
+  kubectl get nodes
 
----
-Hoàn thành quá trình cấu hình Kubernetes Master trỏ tới ETCD.
+  NAME        STATUS      ROLES           AGE   VERSION
+  master-01   NotReady    control-plane   16h   v1.32.1
+  master-2    NotReady    control-plane   16h   v1.32.1
+  worker-01   NotReady    <none>          16h   v1.32.1
+  worker-02   NotReady    <none>          16h   v1.32.1
+  worker-03   NotReady    <none>          16h   v1.32.1
+  ```
+
+  Lúc này ta chưa seup network nên các node có trạng thái NotReady
+
+  
+
