@@ -63,9 +63,6 @@ Mô hình tổng thể:
 1. **Tạo thư mục chứa chứng chỉ ở máy local của bạn**:
 
     ```bash
-    #!/bin/bash
-
-    # Thiết lập thư mục chứa chứng chỉ
     CERT_DIR="openssl"
     mkdir -p ${CERT_DIR} && cd ${CERT_DIR}
 
@@ -92,17 +89,17 @@ Mô hình tổng thể:
 
     # 5. Hiển thị thông báo hoàn thành và danh sách tệp được tạo
     echo ">>> Certificates have been successfully created in the '${CERT_DIR}' directory."
-    ls -l "${CERT_DIR}"
+    ls -l
 
     ```
 
       > **Giải thích:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
-          >- `C=VN`: Quốc gia (Vietnam).
-          >- `ST=Metri`: Bang/Tỉnh.
-          >- `L=Hanoi`: Thành phố.
-          >- `O=example`: Tổ chức.
-          >- `CN=ca`: Tên thông thường (Common Name).
-          >- `-days 3650`: Thời hạn (~10 năm).
+          >>- `C=VN`: Quốc gia (Vietnam).
+          >>- `ST=Metri`: Bang/Tỉnh.
+          >>- `L=Hanoi`: Thành phố.
+          >>- `O=example`: Tổ chức.
+          >>- `CN=ca`: Tên thông thường (Common Name).
+          >>- `-days 3650`: Thời hạn (~10 năm).
 
 ## Setup Loadbalance
 
