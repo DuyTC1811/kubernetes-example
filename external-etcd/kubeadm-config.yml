@@ -62,6 +62,11 @@ apiServer:
   # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
   certSANs:
     - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
+    - loadbalancer
+    - master-02
+    - worker-01
+    - worker-02
+    - worker-03
     - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
 
 controllerManager: {}
@@ -69,7 +74,7 @@ scheduler: {}
 
 certificatesDir: "/etc/kubernetes/pki"        # Thư mục lưu chứng chỉ TLS
 imageRepository: "registry.k8s.io"            # Registry chính thức để tải image Kubernetes
-clusterName: "dev-master"                     # Tên cluster (nên thay đổi phù hợp)
+clusterName: "master"                         # Tên cluster (nên thay đổi phù hợp)
 encryptionAlgorithm: ECDSA-P256               # Thuật toán mã hóa TLS (khuyến nghị)
 
 dns:

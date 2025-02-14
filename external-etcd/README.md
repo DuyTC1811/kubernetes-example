@@ -326,7 +326,6 @@ Mô hình tổng thể:
   192.168.56.53 worker-03
   192.168.56.11 loadbalancer
   EOF
-  reboot
   ```
 
 - 2: Sao chép chứng chỉ đến các node master
@@ -459,6 +458,22 @@ Mô hình tổng thể:
   ```
 
   Lúc này ta chưa seup network nên các node có trạng thái NotReady
+  - trong ví dụ này tôi sẽ dùng mạng cilium
 
+  ``` bash
+  helm repo add cilium https://helm.cilium.io/
+  helm repo update
 
+  helm install cilium cilium/cilium --namespace kube-system --version 1.17.0
+  ```
 
+  - 4: kiểm tra lại các node
+
+  ```plaintex
+  NAME        STATUS      ROLES           AGE   VERSION
+  master-01   Ready    control-plane   16h   v1.32.1
+  master-2    Ready    control-plane   16h   v1.32.1
+  worker-01   Ready    <none>          16h   v1.32.1
+  worker-02   Ready    <none>          16h   v1.32.1
+  worker-03   Ready    <none>          16h   v1.32.1
+  ```
