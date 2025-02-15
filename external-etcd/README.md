@@ -40,17 +40,17 @@ Mô hình tổng thể:
 
 ## Chuẩn bị môi trường
 
-|   hostname   |   IP Address  |   CPU  |  Ram   |     OS     |
-|:------------:|:-------------:|:------:|:------:|:----------:|
-| etcd-01      | 192.168.56.21 |  2CPU  |   2G   | CentOS 9   |
-| etcd-02      | 192.168.56.22 |  2CPU  |   2G   | CentOS 9   |
-| etcd-03      | 192.168.56.23 |  2CPU  |   2G   | CentOS 9   |
-| master-01    | 192.168.56.31 |  2CPU  |   4G   | CentOS 9   |
-| master-02    | 192.168.56.32 |  2CPU  |   4G   | CentOS 9   |
-| worker-01    | 192.168.56.51 |  2CPU  |   2G   | CentOS 9   |
-| worker-02    | 192.168.56.52 |  2CPU  |   2G   | CentOS 9   |
-| worker-03    | 192.168.56.53 |  2CPU  |   2G   | CentOS 9   |
-| loadbalancer | 192.168.56.11 |  2CPU  |   2G   | CentOS 9   |
+|   hostname   |   IP Address  |   CPU  |  Ram   |       OS       |
+|:------------:|:-------------:|:------:|:------:|:--------------:|
+| etcd-01      | 192.168.56.21 |  2CPU  |   2G   | Oracle linux 9 |
+| etcd-02      | 192.168.56.22 |  2CPU  |   2G   | Oracle linux 9 |
+| etcd-03      | 192.168.56.23 |  2CPU  |   2G   | Oracle linux 9 |
+| master-01    | 192.168.56.31 |  2CPU  |   4G   | Oracle linux 9 |
+| master-02    | 192.168.56.32 |  2CPU  |   4G   | Oracle linux 9 |
+| worker-01    | 192.168.56.51 |  2CPU  |   2G   | Oracle linux 9 |
+| worker-02    | 192.168.56.52 |  2CPU  |   2G   | Oracle linux 9 |
+| worker-03    | 192.168.56.53 |  2CPU  |   2G   | Oracle linux 9 |
+| loadbalancer | 192.168.56.11 |  2CPU  |   2G   | Oracle linux 9 |
 
 ---
 
@@ -401,9 +401,12 @@ Mô hình tổng thể:
   apiServer:
     # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
     certSANs:
-      - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
-      - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
-
+      - "loadbalancer"
+      - "master-02"
+      - "worker-01"
+      - "worker-02"
+      - "worker-03"
+      - "127.0.0.1"
   controllerManager: {}
   scheduler: {}
 

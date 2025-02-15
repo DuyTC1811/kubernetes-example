@@ -61,12 +61,11 @@ controlPlaneEndpoint: "192.168.56.11:6443"
 apiServer:
   # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
   certSANs:
-    - "192.168.56.11"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
-    - loadbalancer
-    - master-02
-    - worker-01
-    - worker-02
-    - worker-03
+    - "loadbalancer"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
+    - "master-02"
+    - "worker-01"
+    - "worker-02"
+    - "worker-03"
     - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
 
 controllerManager: {}
