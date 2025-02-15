@@ -1,0 +1,20 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    token: "783bde.3f89s0fje9f38fhf"
+    apiServerEndpoint: "192.168.56.11:6443" # Địa chỉ IP và cổng của server control plane
+    caCertHashes:
+      - "sha256:eb5c721b5cf594f5b17ec50f389682de1f0031f3bf17edbf660c5d964e29edd4"     # --discovery-token-ca-cert-hash
+controlPlane:
+  certificateKey: "8e87db027d2abe0aaf01e6239619da3081a4dc5dbb3a5596d09884a13da59902"  #--control-plane --certificate-key
+  localAPIEndpoint:
+    advertiseAddress: "192.168.56.32" # Địa chỉ IP của server control plane
+    bindPort: 6443                    # Cổng mặc định API server
+nodeRegistration:
+  name: "master-02"                   # Tên của node
+  criSocket: "unix:///var/run/containerd/containerd.sock"
+  taints: []
+  ignorePreflightErrors:
+    - IsPrivilegedUser
+  imagePullPolicy: "IfNotPresent"
