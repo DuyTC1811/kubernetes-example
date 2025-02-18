@@ -1,46 +1,53 @@
 Vagrant.configure("2") do |config|
 
     # Master Nodes
-    MasterCount = 1
+    MasterCount = 2
     (1..MasterCount).each do |i|
-        config.vm.define "master-#{i}" do |master|
-            config.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            master.vm.hostname = "master-#{i}"
-            master.vm.network "private_network", ip: "192.168.56.1#{i}"
+      config.vm.define "master-0#{i}" do |master|
+        master.vm.box = "oraclelinux/9"
+        master.vm.box_check_update = false
+        master.vm.hostname = "master-#{i}"
+        master.vm.network "private_network", ip: "192.168.56.3#{i}"
   
-            master.vm.provider "virtualbox" do |vb|
-                vb.name = "master-#{i}"
-                vb.memory = 2048
-                vb.cpus = 2
-            end
+        master.vm.provider "virtualbox" do |vb|
+          vb.name = "master-0#{i}"
+          vb.memory = 4048
+          vb.cpus = 2
         end
+        master.vm.provision "shell", path: "install-kube.sh", privileged: true
+      end
     end
   
     # Worker Nodes
     WorkerCount = 3
     (1..WorkerCount).each do |i|
-        config.vm.define "worker-#{i}" do |worker|
-            worker.vm.box = "gusztavvargadr/ubuntu-server-2404-lts"
-            worker.vm.hostname = "worker-#{i}"
-            worker.vm.network "private_network", ip: "192.168.56.2#{i}"
+      config.vm.define "worker-0#{i}" do |worker|
+        worker.vm.box = "oraclelinux/9"
+        worker.vm.box_check_update = false
+        worker.vm.hostname = "worker-0#{i}"
+        worker.vm.network "private_network", ip: "192.168.56.5#{i}"
   
-            worker.vm.provider "virtualbox" do |vb|
-                vb.name = "worker-#{i}"
-                vb.memory = 2048
-                vb.cpus = 2
-            end
+        worker.vm.provider "virtualbox" do |vb|
+          vb.name = "worker-0#{i}"
+          vb.memory = 2048
+          vb.cpus = 2
         end
+        worker.vm.provision "shell", path: "install-kube.sh", privileged: true
+      end
     end
   
-    config.vm.provision "shell" do |s|
-        ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
-        s.inline = <<-SHELL
-            sudo sh /vagrant/install-node.sh
-            useradd -s /bin/bash -d /home/ubuntu/ -m -G sudo ubuntu
-            echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-            mkdir -p /home/ubuntu/.ssh && chown -R ubuntu /home/ubuntu/.ssh
-            echo #{ssh_pub_key} >> /home/ubuntu/.ssh/authorized_keys
-        SHELL
-    end
-  
+    # Provisioning: Áp dụng cho tất cả các máy
+    config.vm.provision "shell", inline: <<-SHELL
+      if ! id "centos" >/dev/null 2>&1; then
+        useradd -m -s /bin/bash centos
+        echo "User centos created"
+      fi
+      mkdir -p /home/centos/.ssh
+      echo "#{ssh_pub_key}" >> /home/centos/.ssh/authorized_keys
+      chmod 700 /home/centos/.ssh
+      chmod 600 /home/centos/.ssh/authorized_keys
+      chown -R centos:centos /home/centos/.ssh
+      echo "#{ssh_pub_key}" >> /root/.ssh/authorized_keys
+      echo "SSH public key added!"
+    SHELL
   end
