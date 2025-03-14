@@ -1,0 +1,11 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+nodeRegistration:
+  name: worker-01  # Change this for each worker node
+  criSocket: unix:///var/run/containerd/containerd.sock
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: 192.168.56.31:6443
+    token: "v4kcdt.844i7p0g8pnvza61"
+    caCertHashes:
+      - "sha256:a2b907ebb254e1afc1806840089fb1b45b874068c625c9b2730c11cd85bc7c92"

@@ -28,4 +28,4 @@ sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
 
 echo "[ DELETE TEMPORARY FOLDER ]"
 sudo rm -rf /tmp/etcd-download-test
-mkdir -p /var/lib/etcd
+sudo mkdir -p /var/lib/etcd

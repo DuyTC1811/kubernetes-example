@@ -1,3 +1,4 @@
+---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
 bootstrapTokens:
@@ -11,7 +12,6 @@ bootstrapTokens:
       - signing
     groups:
       - system:bootstrappers:kubeadm:default-node-token
-
 nodeRegistration:
   name: "master-01"
   criSocket: "unix:///var/run/containerd/containerd.sock"
@@ -19,24 +19,27 @@ nodeRegistration:
   ignorePreflightErrors:
     - IsPrivilegedUser
   imagePullPolicy: "IfNotPresent"
-
 localAPIEndpoint:
-  advertiseAddress: "192.168.56.31" # Địa chỉ IP của server control plane
-  bindPort: 6443                    # Cổng mặc định API server
-
-certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01" # Được lấy từ "kubeadm certs certificate-key"
-
-# skipPhases:
-#   - preflight       # Bỏ qua kiểm tra ban đầu
-#   - kubelet-start   # Không khởi động kubelet
-#   - certs           # Bỏ qua tạo chứng chỉ
-
+  advertiseAddress: "192.168.56.31"  # IP address of the control plane server
+  bindPort: 6443                      # Default API server port
+certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01"  # Generated from "kubeadm certs certificate-key"
 timeouts:
-  controlPlaneComponentHealthCheck: "60s" # Chờ 120 giây kiểm tra thành phần control plane
+  controlPlaneComponentHealthCheck: "60s"  # Wait 60 seconds for control plane component health check
 
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
+kubernetesVersion: "stable"  # Replace this value with specific version if needed
+controlPlaneEndpoint: "192.168.56.11:6443"  # LoadBalancer/Public IP OR Private IP
+clusterName: "example-cluster"
+certificatesDir: "/etc/kubernetes/pki"  # Directory for TLS certificates
+imageRepository: "registry.k8s.io"      # Official registry for Kubernetes images
+encryptionAlgorithm: ECDSA-P256         # TLS encryption algorithm (recommended)
+
+networking:
+  serviceSubnet: "10.96.0.0/16"    # Address range for ClusterIP Services
+  podSubnet: "192.168.0.0/16"      # Address range for Pods, customizable as needed
+  dnsDomain: "cluster.local"       # Internal DNS domain name
 
 etcd:
   external:
@@ -44,39 +47,23 @@ etcd:
       - "https://192.168.56.21:2379"
       - "https://192.168.56.22:2379"
       - "https://192.168.56.23:2379"
-    caFile: "/etcd/kubernetes/pki/etcd/ca.pem"
-    certFile: "/etcd/kubernetes/pki/etcd/etcd.pem"
-    keyFile: "/etcd/kubernetes/pki/etcd/etcd-key.pem"
-
-networking:
-  serviceSubnet: "10.96.0.0/16"  # Dải địa chỉ cho ClusterIP Services
-  podSubnet: "192.168.0.0/16"    # Dải địa chỉ cho Pods, tùy chỉnh theo yêu cầu
-  dnsDomain: "cluster.local"     # Tên miền DNS nội bộ
-
-kubernetesVersion: "v1.32.0"
-
-# Thay giá trị này bằng IP và cổng của LoadBalancer/Public IP OR Private IP
-controlPlaneEndpoint: "192.168.56.11:6443"
+    caFile: "/etc/kubernetes/pki/etcd/ca.pem"
+    certFile: "/etc/kubernetes/pki/etcd/etcd.pem"
+    keyFile: "/etc/kubernetes/pki/etcd/etcd-key.pem"
 
 apiServer:
-  # Bổ sung thêm các SANs để API Server trust địa chỉ IP Public, v.v.
+  # Additional SANs for API Server to trust public IP, etc.
   certSANs:
-    - "loadbalancer"               # Public IP Loadbalance (nếu cần kết nối từ ngoài)
-    - "master-02"
-    - "worker-01"
-    - "worker-02"
-    - "worker-03"
-    - "127.0.0.1"                   # Loopback để kiểm tra nội bộ
+    - loadbalancer
+    - master-01
+    - master-02
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
 
+# Component configurations
 controllerManager: {}
 scheduler: {}
-
-certificatesDir: "/etc/kubernetes/pki"        # Thư mục lưu chứng chỉ TLS
-imageRepository: "registry.k8s.io"            # Registry chính thức để tải image Kubernetes
-clusterName: "master"                         # Tên cluster (nên thay đổi phù hợp)
-encryptionAlgorithm: ECDSA-P256               # Thuật toán mã hóa TLS (khuyến nghị)
-
-dns:
-  disabled: true  # disable CoreDNS
-proxy:
-  disabled: true   # disable kube-proxy
+dns: {}
+proxy: {}
