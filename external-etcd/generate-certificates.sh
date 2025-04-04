@@ -31,10 +31,9 @@ openssl x509 -req -in etcd-csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial 
 echo ">>> Certificates have been successfully created in the '${CERT_DIR}' directory."
 ls -l
 
-
-# scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
-# scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
-# scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
-
-# scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.31:/etc/kubernetes/pki/etcd
-# scp -i ../../.ssh/id_rsa.pub ca.pem etcd.pem etcd-key.pem root@192.168.56.32:/etc/kubernetes/pki/etcd
+# - C=VN:       Quốc gia (Vietnam).
+# - ST=Metri:   Bang/Tỉnh.
+# - L=Hanoi:    Thành phố.
+# - O=example:  Tổ chức.
+# - CN=ca:      Tên Thông thường (Common Name).
+# - days 3650:  Thời hạn (~10 năm).
