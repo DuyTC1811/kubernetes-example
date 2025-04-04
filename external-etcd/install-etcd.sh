@@ -29,3 +29,6 @@ sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
 echo "[ DELETE TEMPORARY FOLDER ]"
 sudo rm -rf /tmp/etcd-download-test
 sudo mkdir -p /var/lib/etcd
+sudo firewall-cmd --add-port=2379-2380/tcp --permanent
+sudo firewall-cmd --reload
+sudo chown -R $(whoami):$(whoami) /var/lib/etcd

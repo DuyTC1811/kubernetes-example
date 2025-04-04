@@ -50,11 +50,9 @@ sudo systemctl enable --now kubelet
 echo "[ CREATING DIRECTORY FOR ETCD ]"
 sudo mkdir -vp /etc/kubernetes/pki/etcd/
 
-cat <<EOF | sudo tee -a /etc/hosts
-192.168.56.31 master-01
-192.168.56.32 master-02
-192.168.56.51 worker-01
-192.168.56.52 worker-02
-192.168.56.53 worker-03
-192.168.56.11 loadbalancer
-EOF
+sudo firewall-cmd --add-port=6443/tcp --permanent
+sudo firewall-cmd --add-port=10250/tcp --permanent
+sudo firewall-cmd --add-port=10257/tcp --permanent
+sudo firewall-cmd --add-port=10259/tcp --permanent
+sudo firewall-cmd --reload
+sudo chown -R $(whoami):$(whoami) /etc/kubernetes/pki/etcd/

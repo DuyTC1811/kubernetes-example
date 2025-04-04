@@ -1,3 +1,4 @@
+---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
@@ -9,7 +10,7 @@ discovery:
 controlPlane:
   certificateKey: "8e87db027d2abe0aaf01e6239619da3081a4dc5dbb3a5596d09884a13da59902"  #--control-plane --certificate-key
   localAPIEndpoint:
-    advertiseAddress: "192.168.56.32" # Địa chỉ IP của server control plane
+    advertiseAddress: "192.168.1.15" # Địa chỉ IP của server control plane
     bindPort: 6443                    # Cổng mặc định API server
 nodeRegistration:
   name: "master-02"                   # Tên của node
