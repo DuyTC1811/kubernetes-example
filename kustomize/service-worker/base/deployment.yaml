@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-worker
+  template:
+    metadata:
+      labels:
+        app: service-worker
+    spec:
+      containers:
+        - name: service-worker
+          image: duytc81811/service-worker:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
