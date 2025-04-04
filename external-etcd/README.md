@@ -90,12 +90,12 @@ Mô hình tổng thể:
     ```
 
       > **NOTE:** Tạo yêu cầu ký chứng chỉ (CSR) với thông tin như:
-          >>- `C=VN`: Quốc gia (Vietnam).
-          >>- `ST=Metri`: Bang/Tỉnh.
-          >>- `L=Hanoi`: Thành phố.
-          >>- `O=example`: Tổ chức.
-          >>- `CN=ca`: Tên thông thường (Common Name).
-          >>- `-days 3650`: Thời hạn (~10 năm).
+          >- `C=VN`: Quốc gia (Vietnam).
+          >- `ST=Metri`: Bang/Tỉnh.
+          >- `L=Hanoi`: Thành phố.
+          >- `O=example`: Tổ chức.
+          >- `CN=ca`: Tên thông thường (Common Name).
+          >- `-days 3650`: Thời hạn (~10 năm).
 
 ## Setup Loadbalance
 
