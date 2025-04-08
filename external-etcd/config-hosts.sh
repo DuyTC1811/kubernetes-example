@@ -10,8 +10,7 @@ sudo reboot
 
 helm install cilium cilium/cilium \
 	  --namespace kube-system \
-	  --set ipam.mode=cluster-pool \
-	  --set clusterPoolIPv4PodCIDR=10.244.0.0/24 \
+	  --set ipam.mode=kubernetes \
 	  --set kubeProxyReplacement=true \
 	  --set k8sServiceHost=192.168.1.10 \
 	  --set k8sServicePort=6443

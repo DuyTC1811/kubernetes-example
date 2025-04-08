@@ -20,9 +20,9 @@ nodeRegistration:
     - IsPrivilegedUser
   imagePullPolicy: "IfNotPresent"
 localAPIEndpoint:
-  advertiseAddress: "192.168.56.31"   # IP address of the control plane server
+  advertiseAddress: "192.168.1.14"   # IP address of the control plane server
   bindPort: 6443                      # Default API server port
-certificateKey: "dd40f915bfbd850963f212b793ba1da8c2f89307d5b0e25c7cd7705b94da0b01"  # Generated from "kubeadm certs certificate-key"
+certificateKey: "c7b09915bb905c55f87bb012092fc043ad8d74e4d2b172c1131b6d8505a7babf"  # Generated from "kubeadm certs certificate-key"
 timeouts:
   controlPlaneComponentHealthCheck: "60s"  # Wait 60 seconds for control plane component health check
 
@@ -30,7 +30,7 @@ timeouts:
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
 kubernetesVersion: "stable"  # Replace this value with specific version if needed
-controlPlaneEndpoint: "192.168.56.11:6443"  # LoadBalancer/Public IP OR Private IP
+controlPlaneEndpoint: "192.168.1.10:6443"  # LoadBalancer/Public IP OR Private IP
 clusterName: "example-cluster"
 certificatesDir: "/etc/kubernetes/pki"  # Directory for TLS certificates
 imageRepository: "registry.k8s.io"      # Official registry for Kubernetes images
@@ -38,32 +38,33 @@ encryptionAlgorithm: ECDSA-P256         # TLS encryption algorithm (recommended)
 
 networking:
   serviceSubnet: "10.96.0.0/16"    # Address range for Services
-  podSubnet: "10.244.0.0/24"       # Address range for Pods
+  podSubnet: "10.244.0.0/16"       # Address range for Pods
   dnsDomain: "cluster.local"       # Internal DNS domain name
 
 etcd:
   external:
     endpoints:
-      - "https://192.168.56.21:2379"
-      - "https://192.168.56.22:2379"
-      - "https://192.168.56.23:2379"
+      - "https://192.168.1.11:2379"
+      - "https://192.168.1.12:2379"
+      - "https://192.168.1.13:2379"
     caFile: "/etc/kubernetes/pki/etcd/ca.pem"
     certFile: "/etc/kubernetes/pki/etcd/etcd.pem"
     keyFile: "/etc/kubernetes/pki/etcd/etcd-key.pem"
 
 apiServer:
-  # Additional SANs for API Server to trust public IP, etc.
   certSANs:
-    - loadbalancer
-    - master-01
-    - master-02
-    - kubernetes
-    - kubernetes.default
-    - kubernetes.default.svc
-    - kubernetes.default.svc.cluster.local
+    - "192.168.1.10"  # LoadBalancer/Public IP OR Private IP
+    - "192.168.1.14"  # IP Master 01
+    - "192.168.1.15"  # IP Master 02
+    - "kubernetes"
+    - "kubernetes.default"
+    - "kubernetes.default.svc"
+    - "kubernetes.default.svc.cluster.local"
 
 # Component configurations
 controllerManager: {}
 scheduler: {}
 dns: {}
-proxy: {}
+proxy:
+  disabled: true   # disable kube-proxy
+  
