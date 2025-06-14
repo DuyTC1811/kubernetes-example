@@ -1,4 +1,4 @@
-# Install Self-Managed GitLab on AlmaLinux 8/9
+# Install Self-Managed GitLab on Oracle linux 8/9
 
 This guide walks you through installing a self-managed GitLab instance using the official Linux package Oracle linux 8 or 9.
 
