@@ -2,7 +2,10 @@
 set -xe
 cat <<EOF > /etc/systemd/system/etcd.service
 [Unit]
-Description=etcd
+Description=etcd-01
+Documentation=https://etcd.io/docs/
+After=network.target
+
 [Service]
 ExecStart=/usr/local/bin/etcd \\
   --name etcd-01 \\
@@ -17,13 +20,14 @@ ExecStart=/usr/local/bin/etcd \\
   --peer-auto-tls \\
   --snapshot-count '10000' \\
   --wal-dir=/var/lib/etcd/wal \\
+  --data-dir=/var/lib/etcd/data \\
   --client-cert-auth \\
   --trusted-ca-file=/var/lib/etcd/ca.pem \\
   --cert-file=/var/lib/etcd/etcd.pem \\
-  --key-file=/var/lib/etcd/etcd-key.pem \\
-  --data-dir=/var/lib/etcd/data
+  --key-file=/var/lib/etcd/etcd-key.pem
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 
 [Install]
 WantedBy=multi-user.target
@@ -32,7 +36,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable etcd
 sudo systemctl start etcd
 
-
-# sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
-# sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint status -w=table --cluster
-# sudo etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem member list -w=table
+# etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
+# etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint status -w=table --cluster
+# etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem member list -w=table
