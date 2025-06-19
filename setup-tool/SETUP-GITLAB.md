@@ -21,7 +21,7 @@ sudo firewall-cmd --permanent --add-service=https
 sudo systemctl reload firewalld
 ```
 
-### Cấu hình SMTP Gmail trong GitLab
+### Config SMTP Gmail in GitLab
 
 ```bash
 sudo nano /etc/gitlab/gitlab.rb
@@ -53,7 +53,7 @@ curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rp
 Replace `gitlab.example.com` with your server's domain or IP:
 
 ```bash
-sudo EXTERNAL_URL="https://gitlab.example.com" dnf install -y gitlab-ee
+sudo EXTERNAL_URL="https://gitlab.example.com" dnf install -y gitlab-ce
 ```
 - For available versions:  
     `sudo dnf --showduplicates list gitlab-ee`
@@ -65,7 +65,7 @@ sudo EXTERNAL_URL="https://gitlab.example.com" dnf install -y gitlab-ee
 ## 3. Access GitLab
 
 - Open `https://gitlab.example.com` in your browser.
-- The initial root password is stored in `/etc/gitlab/initial_root_password` (valid for 24 hours).
+- The initial root password is stored in `cat /etc/gitlab/initial_root_password` (valid for 24 hours).
 - Login with username `root` and the password above.
 
 ---

@@ -143,7 +143,7 @@ Mô hình tổng thể:
 
   kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:*** --control-plane --certificate-key ***
 
-  token dùng để join worker-node
+  Token dùng để join worker-node
 
   kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:***
   ```
@@ -163,7 +163,7 @@ Mô hình tổng thể:
 
   NAME        STATUS      ROLES           AGE   VERSION
   master-01   NotReady    control-plane   16h   v1.32.1
-  master-2    NotReady    control-plane   16h   v1.32.1
+  master-02   NotReady    control-plane   16h   v1.32.1
   worker-01   NotReady    <none>          16h   v1.32.1
   worker-02   NotReady    <none>          16h   v1.32.1
   worker-03   NotReady    <none>          16h   v1.32.1
@@ -178,21 +178,20 @@ Mô hình tổng thể:
 
   helm install cilium cilium/cilium \
       --namespace kube-system \
-      --set ipam.mode=cluster-pool \
-      --set clusterPoolIPv4PodCIDR=10.244.0.0/24 \
+      --set ipam.mode=kubernetes \
       --set kubeProxyReplacement=true \
-      --set k8sServiceHost=192.168.1.10 \
+      --set k8sServiceHost=192.168.1.10 \ #ip Loadbalance
       --set k8sServicePort=6443
   ```
 
-  - 4: kiểm tra lại các node
+- 4: kiểm tra lại các node
 
   ```plaintex
   kubectl get nodes
 
   NAME        STATUS      ROLES           AGE   VERSION
   master-01   Ready    control-plane   16h   v1.32.1
-  master-2    Ready    control-plane   16h   v1.32.1
+  master-02   Ready    control-plane   16h   v1.32.1
   worker-01   Ready    <none>          16h   v1.32.1
   worker-02   Ready    <none>          16h   v1.32.1
   worker-03   Ready    <none>          16h   v1.32.1

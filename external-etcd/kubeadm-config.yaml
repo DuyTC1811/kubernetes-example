@@ -44,9 +44,7 @@ networking:
 etcd:
   external:
     endpoints:
-      - "https://192.168.1.11:2379"
-      - "https://192.168.1.12:2379"
-      - "https://192.168.1.13:2379"
+      - "https://192.168.1.11:2379" # có thể thêm nhiều endpoint ETCD nếu cần
     caFile: "/etc/kubernetes/pki/etcd/ca.pem"
     certFile: "/etc/kubernetes/pki/etcd/etcd.pem"
     keyFile: "/etc/kubernetes/pki/etcd/etcd-key.pem"
@@ -54,12 +52,6 @@ etcd:
 apiServer:
   certSANs:
     - "192.168.1.10"  # LoadBalancer/Public IP OR Private IP
-    - "192.168.1.14"  # IP Master 01
-    - "192.168.1.15"  # IP Master 02
-    - "kubernetes"
-    - "kubernetes.default"
-    - "kubernetes.default.svc"
-    - "kubernetes.default.svc.cluster.local"
 
 # Component configurations
 controllerManager: {}

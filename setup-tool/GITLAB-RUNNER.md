@@ -6,22 +6,14 @@ This guide explains how to set up a GitLab Runner for your CI/CD pipelines.
 
 - A GitLab account
 - Access to your GitLab project
-- A server or VM (Linux, macOS, or Windows) with Docker installed
+- A server or VM (Oracle linux 9)
 
 ## 1. Install GitLab Runner
-
-**On Linux (using Docker):**
 ```sh
-docker run -d --name gitlab-runner --restart always \
-    -v /srv/gitlab-runner/config:/etc/gitlab-runner \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    gitlab/gitlab-runner:latest
-```
-
-**Or, install directly:**
-```sh
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
-sudo apt-get install gitlab-runner
+curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
+sudo dnf -y install gitlab-runner
+sudo systemctl enable gitlab-runner
+sudo systemctl start gitlab-runner
 ```
 
 ## 2. Register the Runner
@@ -42,10 +34,20 @@ sudo gitlab-runner register \
   --executor "shell" \
   --description "runner-shell-oracle-192.168.1.21"
 ```
-## 3. Start the Runner
-
+## 3. Install JAVA
+Thiết lập JAVA_HOME cho user gitlab-runner hoặc  nodejs hay package khác 
 ```sh
-sudo gitlab-runner start
+sudo dnf install java-21-openjdk-devel -y
+# sudo nano /home/gitlab-runner/.bash_profile
+# tự động set JAVA_HOME đúng với phiên bản Java hiện tại:
+export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+```
+
+## 3. Install Docker
+- [Install Docker](INSTALL-DOCKER.md)
+```sh
+# permissions docker build images and push
+sudo usermod -aG docker gitlab-runner # grant 
 ```
 
 ## 4. Verify Runner

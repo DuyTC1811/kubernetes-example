@@ -4,7 +4,7 @@ kind: JoinConfiguration
 discovery:
   bootstrapToken:
     token: "783bde.3f89s0fje9f38fhf"
-    apiServerEndpoint: "192.168.56.11:6443" # Địa chỉ IP và cổng của server control plane
+    apiServerEndpoint: "192.168.1.10:6443" # Địa chỉ IP loadBalancer hoặc IP của server control plane
     caCertHashes:
       - "sha256:eb5c721b5cf594f5b17ec50f389682de1f0031f3bf17edbf660c5d964e29edd4"     # --discovery-token-ca-cert-hash
 controlPlane:
