@@ -1,0 +1,72 @@
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "bgp-pool"
+spec:
+  blocks:
+  - start: "20.0.20.100"
+    stop: "20.0.20.200"
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPAdvertisement
+metadata:
+  name: pod-cidr
+  labels:
+    advertise: pod-cidr
+spec:
+  advertisements:
+    - advertisementType: PodCIDR
+    - advertisementType: Service
+      service:
+        addresses:
+          - LoadBalancerIP
+      selector:
+        matchExpressions:
+          - key: somekey
+            operator: NotIn
+            values: ["never-used-value"] #Select all the LoadBalancer services to be available externally
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeerConfig
+metadata:
+  name: peer-config
+spec:
+  timers:
+    holdTimeSeconds: 9
+    keepAliveTimeSeconds: 3
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 15
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: "pod-cidr"
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPClusterConfig
+metadata:
+  name: bgp-peer
+spec:
+  nodeSelector:
+    matchLabels:
+      bgp: enabled  #Should match the label with nodes
+  bgpInstances:
+    - name: "instance-64512"
+      localASN: 64512
+      peers:
+        - name: "peer-64512-enabled"
+          peerASN: 64512
+          peerAddress: "192.168.1.10"  #Router IP address
+          peerConfigRef:
+            name: "peer-config"
+
+# không cho triển khai lên các node master
+# kubectl taint node master-01 node-role.kubernetes.io/control-plane=:NoSchedule
+# kubectl taint node master-02 node-role.kubernetes.io/control-plane=:NoSchedule
+
+# add labels to worker nodes for BGP
+# kubectl label nodes worker-01 bgp=enabled
+# kubectl label nodes worker-02 bgp=enabled

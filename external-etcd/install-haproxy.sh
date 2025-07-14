@@ -42,13 +42,15 @@ defaults
     timeout server          1m
 
 #---------------------------------------------------------------------
-# main frontend which proxys to the backends
+# k8s-api frontend which proxys to the backends
 #---------------------------------------------------------------------
-frontend main
+frontend k8s-api
     bind *:6443
     default_backend             kubernetes-backend
 
+#---------------------------------------------------------------------
 # Backend cho Kubernetes API Server
+#---------------------------------------------------------------------
 backend kubernetes-backend
     option tcp-check
     balance roundrobin
