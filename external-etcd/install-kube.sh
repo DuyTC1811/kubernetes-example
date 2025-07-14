@@ -50,9 +50,7 @@ sudo systemctl enable --now kubelet
 echo "[ CREATING DIRECTORY FOR ETCD ]"
 sudo mkdir -vp /etc/kubernetes/pki/etcd/
 
-sudo firewall-cmd --add-port=6443/tcp --permanent
-sudo firewall-cmd --add-port=10250/tcp --permanent
-sudo firewall-cmd --add-port=10257/tcp --permanent
-sudo firewall-cmd --add-port=10259/tcp --permanent
-sudo firewall-cmd --reload
+sudo systemctl stop firewalld
+sudo systemctl disable firewalld
+sudo systemctl mask firewalld
 sudo chown -R $(whoami):$(whoami) /etc/kubernetes/pki/etcd/
