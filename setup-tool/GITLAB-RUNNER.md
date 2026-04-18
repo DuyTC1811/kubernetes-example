@@ -1,59 +1,70 @@
-# Setting Up GitLab Runner
+# Cài GitLab Runner (Shell Executor)
 
-This guide explains how to set up a GitLab Runner for your CI/CD pipelines.
+Tài liệu này hướng dẫn cài GitLab Runner trên Oracle Linux 9 để chạy CI/CD jobs.
 
-## Prerequisites
+## 1) Cài GitLab Runner
 
-- A GitLab account
-- Access to your GitLab project
-- A server or VM (Oracle linux 9)
-
-## 1. Install GitLab Runner
-```sh
+```bash
 curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
 sudo dnf -y install gitlab-runner
-sudo systemctl enable gitlab-runner
-sudo systemctl start gitlab-runner
+sudo systemctl enable --now gitlab-runner
 ```
 
-## 2. Register the Runner
+## 2) Đăng ký runner
 
-```sh
+### Cách tương tác (interactive)
+
+```bash
 sudo gitlab-runner register
 ```
-- Enter your GitLab instance URL.
-- Enter the registration token (find it in your project under **Settings > CI/CD > Runners**).
-- Enter a description and tags (optional).
-- Choose the executor (e.g., `docker`, `shell`, etc.).
-- or install 
+
+Bạn cần nhập:
+
+- URL GitLab (ví dụ: `https://gitlab.example.com`)
+- Registration token (trong **Project > Settings > CI/CD > Runners**)
+- Executor (`shell`, `docker`, ...)
+
+### Cách không tương tác (non-interactive)
+
 ```bash
 sudo gitlab-runner register \
   --non-interactive \
-  --url "http://192.168.1.21" \
-  --token "glrt-liWyjoxswR7KU0HnAykxZG86MQpwOjEKdDozCnU6Mg8.01.171qmiqgo" \
+  --url "https://gitlab.example.com" \
+  --token "<registration-token>" \
   --executor "shell" \
-  --description "runner-shell-oracle-192.168.1.21"
-```
-## 3. Install JAVA
-Thiết lập JAVA_HOME cho user gitlab-runner hoặc  nodejs hay package khác 
-```sh
-sudo dnf install java-21-openjdk-devel -y
-# sudo nano /home/gitlab-runner/.bash_profile
-# tự động set JAVA_HOME đúng với phiên bản Java hiện tại:
-export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+  --description "runner-shell-oracle"
 ```
 
-## 3. Install Docker
-- [Install Docker](INSTALL-DOCKER.md)
-```sh
-# permissions docker build images and push
-sudo usermod -aG docker gitlab-runner # grant 
+## 3) Cài dependency thường dùng cho pipeline
+
+### Java
+
+```bash
+sudo dnf install -y java-21-openjdk-devel
 ```
 
-## 4. Verify Runner
+Nếu cần set `JAVA_HOME` cho user `gitlab-runner`:
 
-Go to your GitLab project’s **Settings > CI/CD > Runners** to confirm the runner is active.
+```bash
+sudo -u gitlab-runner bash -lc 'echo export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) >> ~/.bash_profile'
+```
 
-## References
+### Docker (tuỳ chọn)
 
-- [GitLab Runner Docs](https://docs.gitlab.com/runner/)
+Xem thêm: `INSTALL-DOCKER.md`.
+
+Nếu job build image Docker:
+
+```bash
+sudo usermod -aG docker gitlab-runner
+sudo systemctl restart gitlab-runner
+```
+
+## 4) Xác minh
+
+- Vào **Project > Settings > CI/CD > Runners**.
+- Runner phải ở trạng thái `online`.
+
+## Tài liệu chính thức
+
+- https://docs.gitlab.com/runner/
