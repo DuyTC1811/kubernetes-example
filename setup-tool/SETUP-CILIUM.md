@@ -1,49 +1,35 @@
-# Setup Cilium for Kubernetes
+# Cài Cilium CNI cho Kubernetes bằng Helm
 
-## Prerequisites
+## 1) Điều kiện
 
-- A running Kubernetes cluster
-- `kubectl` configured to access your cluster
-- Helm (optional, for advanced installation)
+- Cụm Kubernetes hoạt động bình thường
+- `kubectl` đã trỏ đúng cluster
+- Cài `helm`
 
-## 1. Install Helm (if not already installed)
-
-```bash
-curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-sudo apt-get install apt-transport-https --yes
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-sudo apt-get update
-sudo apt-get install helm
-echo -e "\e[34m[ DONE ] INSTALL HELM \e[0m"
-echo "--------------------------------------------"
-```
-
-## 2. Add Cilium Helm repository
+## 2) Thêm Helm repo của Cilium
 
 ```bash
 helm repo add cilium https://helm.cilium.io/
 helm repo update
-echo -e "\e[34m[ DONE ] ADD CILIUM HELM REPOSITORY \e[0m"
-echo "--------------------------------------------"
-
 ```
 
-## 3. Install Cilium using Helm
+## 3) Cài Cilium
 
 ```bash
-helm install cilium cilium/cilium --namespace kube-system -f cilium-values.yaml
+helm install cilium cilium/cilium \
+  --namespace kube-system \
+  -f ../external-etcd/cilium-value.yaml
 ```
 
-you can customize the `cilium-values.yaml` file to suit your environment. Below is an example of a basic configuration file:
+> Có thể thay đổi tham số trong `../external-etcd/cilium-value.yaml` theo môi trường.
 
-- [File cilium-value](../external-etcd/cilium-value.yaml)
-
-## 4. Verify Cilium installation
+## 4) Kiểm tra
 
 ```bash
 kubectl get pods -n kube-system -l k8s-app=cilium
+kubectl -n kube-system get ds cilium
 ```
 
-## References
+## Tài liệu chính thức
 
-- [Cilium Quick Installation Guide](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/)
+- https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/

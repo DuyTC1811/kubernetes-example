@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "[ TURN OFF SWAP ]"
 sudo setenforce 0
@@ -50,6 +51,7 @@ sudo systemctl enable --now kubelet
 cat <<EOF | sudo tee -a /etc/hosts
 192.168.56.31 master.dns.local master-01
 192.168.56.51 worker.dns.local worker-01
-192.168.56.51 worker2.dns.local worker-02
+192.168.56.52 worker2.dns.local worker-02
 EOF
-sudo reboot
+
+echo "Kubernetes prerequisites installed. Reboot manually if needed."

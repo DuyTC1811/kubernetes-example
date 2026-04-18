@@ -1,198 +1,153 @@
-# Hướng dẫn Setup HA External ETCD
+# Kubernetes HA với External ETCD (Dễ đọc)
 
-<!-- Mục lục -->
-1. [Giới thiệu](#giới-thiệu)
-2. [Kiến trúc](#kiến-trúc)
-3. [Chuẩn bị môi trường](#chuẩn-bị-môi-trường)
-4. [General certificate](#chuẩn-bị-môi-trường)
-5. [Setup Loadbalance](#setup-loadbalance)
-6. [Setup cluster ETCD](#setup-and-config-cluster-etcd)
-7. [Setup Kubernetes](#setup-kubernetes)
+Tài liệu này hướng dẫn dựng cụm Kubernetes HA bằng **kubeadm**, tách **ETCD** thành cụm riêng để tăng độ sẵn sàng.
 
----
+## 1) Mục tiêu kiến trúc
 
-## Giới thiệu
+- ETCD chạy độc lập trên 3 node (`etcd-01..03`).
+- 2 control plane (`master-01`, `master-02`).
+- Nhiều worker node.
+- 1 node load balancer (HAProxy) để expose API Server (`:6443`).
 
-Hướng dẫn này mô tả cách thiết lập **High Availability (HA)** cho **Kubernetes** với **ETCD** dưới dạng External (ngoại vi).  
-Bằng cách tách ETCD khỏi các node Master và triển khai nó thành một cluster độc lập, có thể đảm bảo tính sẵn sàng cao, cũng như tránh được rủi ro về “điểm chết” (single point of failure).
+Tham khảo sơ đồ: `../images/kubernetes.png`.
 
-## Kiến trúc
+## 2) Thành phần trong thư mục này
 
-Mô hình tổng thể:
+- `generate-certificates.sh`: tạo CA/cert cho ETCD.
+- `install-haproxy.sh`: cài + cấu hình HAProxy.
+- `install-etcd.sh`: cài ETCD trên các node ETCD.
+- `install-kube.sh`: chuẩn bị node Kubernetes (containerd, kubelet, kubeadm...).
+- `kubeadm-config.yaml`: cấu hình `kubeadm init` dùng external ETCD.
+- `join-master.yaml`: cấu hình thêm control-plane node.
+- `config-hosts.sh`: đồng bộ hosts file.
+- `setup-etcd-01.sh`, `setup-etcd-02.sh`, `setup-etcd-03.sh`: script bootstrap từng node ETCD.
 
-- Triển khai một cluster ETCD riêng biệt gồm nhiều node (thường là **3** hoặc **5** node để đảm bảo **quorum**).
-- Các node Kubernetes Master (control plane) sẽ trỏ đến ETCD cluster này.
-- Nếu một node ETCD gặp sự cố, các node ETCD còn lại vẫn duy trì khả năng đọc/ghi dữ liệu, đảm bảo toàn hệ thống tiếp tục hoạt động ổn định.
+## 3) Chuẩn bị môi trường
 
-<p>
-  <img src="../images/kubernetes.png" alt="Kubernetes HA Architecture" width="800"/>
-</p>
+Ví dụ lab:
 
-## Chuẩn bị môi trường
+| Role | Hostname | IP |
+|---|---|---|
+| ETCD | etcd-01 | 192.168.56.21 |
+| ETCD | etcd-02 | 192.168.56.22 |
+| ETCD | etcd-03 | 192.168.56.23 |
+| Control Plane | master-01 | 192.168.56.31 |
+| Control Plane | master-02 | 192.168.56.32 |
+| Worker | worker-01 | 192.168.56.51 |
+| Worker | worker-02 | 192.168.56.52 |
+| Worker | worker-03 | 192.168.56.53 |
+| LB | loadbalancer | 192.168.56.11 |
 
-|   hostname   |   IP Address  |   CPU  |  Ram   |       OS       |
-|:------------:|:-------------:|:------:|:------:|:--------------:|
-| etcd-01      | 192.168.56.21 |  2CPU  |   2G   | Oracle linux 9 |
-| etcd-02      | 192.168.56.22 |  2CPU  |   2G   | Oracle linux 9 |
-| etcd-03      | 192.168.56.23 |  2CPU  |   2G   | Oracle linux 9 |
-| master-01    | 192.168.56.31 |  2CPU  |   4G   | Oracle linux 9 |
-| master-02    | 192.168.56.32 |  2CPU  |   4G   | Oracle linux 9 |
-| worker-01    | 192.168.56.51 |  2CPU  |   2G   | Oracle linux 9 |
-| worker-02    | 192.168.56.52 |  2CPU  |   2G   | Oracle linux 9 |
-| worker-03    | 192.168.56.53 |  2CPU  |   2G   | Oracle linux 9 |
-| loadbalancer | 192.168.56.11 |  2CPU  |   2G   | Oracle linux 9 |
+> Khuyến nghị: đồng bộ thời gian (NTP), tắt swap, mở firewall đúng port trước khi triển khai.
 
----
+## 4) Luồng triển khai nhanh
 
-## General certificate
+### Bước 1: Tạo chứng chỉ ETCD trên máy quản trị
 
-1. **Tạo thư mục chứa chứng chỉ ở máy local của bạn**:
-  - [File Generate certificate](generate-certificates.sh) `generate-certificates.sh`
+```bash
+chmod +x generate-certificates.sh
+./generate-certificates.sh
+```
 
-## Setup Loadbalance
-  - [File Setup Loadbalance](install-haproxy.sh) `install-haproxy.sh`
+Kết quả mong đợi: có `ca.pem`, `etcd.pem`, `etcd-key.pem`.
 
-## Setup and config cluster ETCD
+### Bước 2: Cài HAProxy trên node load balancer
 
-- 1: Setup ETCD
-  - [File Setup ETCD](install-etcd.sh) `install-etcd.sh`
+```bash
+chmod +x install-haproxy.sh
+./install-haproxy.sh
+```
 
-  > **NOTE:** Setup:
-  - (etcd-01) `192.168.56.21`
-  - (etcd-02) `192.168.56.22`
-  - (etcd-03) `192.168.56.23`
+Kiểm tra:
 
-- 2: Sao chép chứng chỉ đến các node
+```bash
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+```
 
-    ```bash
-    scp ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
-    scp ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
-    scp ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
-    ```
+### Bước 3: Cài và cấu hình ETCD cluster
 
-- 3:**Tạo Service** `etcd.service` (etcd-01) `192.168.56.21` (etcd-01) `192.168.56.22` (etcd-01) `192.168.56.23`:
-  > Note:
-    - `--name etcd-01` Tên của node trong cụm etcd
-    - `--initial-advertise-peer-urls` URL để cho biết các node khác có thể kết nối qua Ip này
-    - `--listen-peer-urls https://192.168.56.21:2380` URL để lắng nghe kết nối từ các node khác trong cụm
-    - `--listen-client-urls https://192.168.56.21:2379,https://127.0.0.1:2379` URL để lắng nghe các kết nối từ client
-    - `--advertise-client-urls https://192.168.56.21:2379` # URL quảng cáo cho client kết nối
-    - `--initial-cluster-token etcd-token` Token nhận diện cụm etcd
-    - `--initial-cluster etcd-01=https://192.xx.xx.xx:xxxx,..,..,..` Danh sách các node trong cụm và địa chỉ peer
-    - `--log-outputs=/var/lib/etcd/etcd.log` File log của etcd
-    - `--initial-cluster-state new` Trạng thái ban đầu của cụm (new/existing)
-    - `--peer-auto-tls` Kích hoạt tự động tạo TLS giữa các node trong cụm
-    - `--snapshot-count '10000'` Số lượng thay đổi trước khi tạo snapshot
-    - `--wal-dir=/var/lib/etcd/wal` Thư mục lưu trữ WAL (Write-Ahead Log)
-    - `--client-cert-auth` Kích hoạt xác thực client bằng chứng chỉ
-    - `--trusted-ca-file=/var/lib/etcd/ca.pem` File CA dùng để xác thực client
-    - `--cert-file=/var/lib/etcd/etcd.pem` File chứng chỉ của etcd server
-    - `--key-file=/var/lib/etcd/etcd-key.pem` File khóa riêng của etcd server
-    - `--data-dir=/var/lib/etcd/data` Thư mục lưu trữ dữ liệu của etcd
-    - `Restart=on-failure` Tự động khởi động lại nếu service gặp lỗi
-    - `RestartSec=5` Thời gian chờ trước khi khởi động lại (5 giây)
-    - `WantedBy=multi-user.target` Dịch vụ sẽ được khởi động trong chế độ multi-user (chế độ server)
+Chạy script cài ETCD trên 3 node ETCD:
 
-- 4: Kiểm tra hoạt động ETCD
+```bash
+chmod +x install-etcd.sh
+./install-etcd.sh
+```
 
-    ```bash
-    etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
-    ```
+Copy chứng chỉ lên từng node ETCD:
 
-    ```plaintex
-    +----------------------------+--------+------------+-------+
-    |          ENDPOINT          | HEALTH |    TOOK    | ERROR |
-    +----------------------------+--------+------------+-------+
-    | https://192.168.56.21:2379 |   true | 6.781673ms |       |
-    | https://192.168.56.23:2379 |   true | 5.884019ms |       |
-    | https://192.168.56.22:2379 |   true |  7.83654ms |       |
-    +----------------------------+--------+------------+-------+
-    ```
+```bash
+scp ca.pem etcd.pem etcd-key.pem root@192.168.56.21:/var/lib/etcd
+scp ca.pem etcd.pem etcd-key.pem root@192.168.56.22:/var/lib/etcd
+scp ca.pem etcd.pem etcd-key.pem root@192.168.56.23:/var/lib/etcd
+```
 
-### Setup Kubernetes
+Bootstrap từng node (chạy đúng script theo node):
 
-- 1: Setup Kubernetes `192.168.56.31` `192.168.56.32` `192.168.56.51` `192.168.56.52` `192.168.56.53`
-  - [File Setup Kubernetes](install-kube.sh) `install-kube.sh`
-  - Chạy script:
+```bash
+# ví dụ trên etcd-01
+chmod +x setup-etcd-01.sh
+./setup-etcd-01.sh
+```
 
-      ```bash
-      chmod +x install-kube.sh
-      ./install-kube.sh
-      ```
+Kiểm tra health toàn cụm ETCD:
 
-- 2: Sao chép chứng chỉ đến các node master
+```bash
+etcdctl \
+  --cacert=/var/lib/etcd/ca.pem \
+  --cert=/var/lib/etcd/etcd.pem \
+  --key=/var/lib/etcd/etcd-key.pem \
+  endpoint health -w=table --cluster
+```
 
-    ```bash
-    scp ca.pem etcd.pem etcd-key.pem root@192.168.56.31:/etcd/kubernetes/pki/etcd
-    scp ca.pem etcd.pem etcd-key.pem root@192.168.56.32:/etcd/kubernetes/pki/etcd
-    ```
+### Bước 4: Chuẩn bị các node Kubernetes
 
-- 3: Tạo file cấu hình Node master: `sudo touch kubeadm-config.yaml`
-  - [File Kubeadm config](kubeadm-config.yaml) `kubeadm-config.yaml`
-  - Chạy script:
+Trên tất cả master/worker:
 
-      ```bash
-      kubeadm init --config kubeadm-config.yaml --upload-certs
-      ```
+```bash
+chmod +x install-kube.sh
+./install-kube.sh
+```
 
-  
-  Sau chạy câu lệnh `kubeadm init --config kubeadm-config.yml --upload-certs` sẽ generate token để joi các node vào với nhau
+### Bước 5: Khởi tạo control plane đầu tiên
 
-  ```plaintex
-  token dùng để join control-plane
+Trên `master-01`:
 
-  kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:*** --control-plane --certificate-key ***
+```bash
+kubeadm init --config kubeadm-config.yaml --upload-certs
+```
 
-  Token dùng để join worker-node
+Lưu lại:
 
-  kubeadm join 192.168.56.11:6443 --token 9a08jv.*** --discovery-token-ca-cert-hash sha256:***
-  ```
+- `kubeadm join ...` cho worker.
+- `kubeadm join ... --control-plane ...` cho master thứ 2.
 
-  Cấu hình `kubectl`
+### Bước 6: Join master-02 và worker
 
-  ```bash
-  mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-  ```
+- Dùng token do `kubeadm init` trả về.
+- Có thể tham chiếu `join-master.yaml` để chuẩn hóa cấu hình join control plane.
 
-  Kiểm tra trạng thái
+## 5) Checklist xác minh sau triển khai
 
-  ```plaintex
-  kubectl get nodes
+```bash
+kubectl get nodes -o wide
+kubectl get pods -A
+kubectl get --raw='/readyz?verbose'
+```
 
-  NAME        STATUS      ROLES           AGE   VERSION
-  master-01   NotReady    control-plane   16h   v1.32.1
-  master-02   NotReady    control-plane   16h   v1.32.1
-  worker-01   NotReady    <none>          16h   v1.32.1
-  worker-02   NotReady    <none>          16h   v1.32.1
-  worker-03   NotReady    <none>          16h   v1.32.1
-  ```
+Kỳ vọng:
 
-  Lúc này ta chưa seup network nên các node có trạng thái NotReady
-  - trong ví dụ này tôi sẽ dùng mạng cilium
+- Tất cả node ở trạng thái `Ready`.
+- Control plane components đều `Running`.
+- ETCD endpoint health đều `true`.
 
-  ``` bash
-  helm repo add cilium https://helm.cilium.io/
-  helm repo update
+## 6) Các lỗi thường gặp
 
-  helm install cilium cilium/cilium \
-      --namespace kube-system \
-      --set ipam.mode=kubernetes \
-      --set kubeProxyReplacement=true \
-      --set k8sServiceHost=192.168.1.10 \ #ip Loadbalance
-      --set k8sServicePort=6443
-  ```
+- **ETCD không quorum**: kiểm tra IP/port `2379`, `2380`, cert và `initial-cluster`.
+- **Master join thất bại**: kiểm tra `certificate-key`, LB `:6443`, SAN trong cert.
+- **Node NotReady**: kiểm tra CNI plugin, `containerd`, `kubelet` logs.
 
-- 4: kiểm tra lại các node
+## 7) Gợi ý vận hành
 
-  ```plaintex
-  kubectl get nodes
-
-  NAME        STATUS      ROLES           AGE   VERSION
-  master-01   Ready    control-plane   16h   v1.32.1
-  master-02   Ready    control-plane   16h   v1.32.1
-  worker-01   Ready    <none>          16h   v1.32.1
-  worker-02   Ready    <none>          16h   v1.32.1
-  worker-03   Ready    <none>          16h   v1.32.1
-  ```
+- Dùng phiên bản Kubernetes/ETCD đồng bộ giữa các node.
+- Sao lưu snapshot ETCD định kỳ.
+- Dùng GitOps (ArgoCD) hoặc Kustomize để quản lý manifest triển khai ứng dụng.

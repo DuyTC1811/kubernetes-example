@@ -1,45 +1,45 @@
-# Setting Up Gradle
+# Cài Gradle (manual)
 
-This guide will help you set up Gradle for your project.
+## 1) Cài Java
 
-## 1. Install manually
-Visit [gradle.org/releases](https://gradle.org/releases/) and follow the installation instructions.
-```sh
-sudo dnf install java-21-openjdk -y
-wget https://services.gradle.org/distributions/gradle-8.14.2-bin.zip
-sudo unzip -d /opt/gradle gradle-8.14.2-bin.zip
+```bash
+sudo dnf install -y java-21-openjdk java-21-openjdk-devel
+```
 
-sudo nano /etc/profile.d/gradle.sh # create file
-# add file
-export GRADLE_HOME=/opt/gradle/gradle-8.14.2 
+## 2) Tải và cài Gradle
+
+```bash
+cd /tmp
+curl -LO https://services.gradle.org/distributions/gradle-8.14.2-bin.zip
+sudo mkdir -p /opt/gradle
+sudo unzip gradle-8.14.2-bin.zip -d /opt/gradle
+```
+
+## 3) Khai báo biến môi trường
+
+```bash
+sudo tee /etc/profile.d/gradle.sh > /dev/null <<'SH'
+export GRADLE_HOME=/opt/gradle/gradle-8.14.2
 export PATH=${GRADLE_HOME}/bin:${PATH}
-
+SH
 sudo chmod +x /etc/profile.d/gradle.sh
 source /etc/profile.d/gradle.sh
 ```
-## 2. Verify Installation
 
-Check the Gradle version:
-```sh
+## 4) Kiểm tra
+
+```bash
 gradle --version
 ```
 
-## 3. Basic Gradle Commands
+## 5) Lệnh Gradle thường dùng
 
-- Build the project:  
-  ```sh
-  gradle build
-  ```
-- Run tests:  
-  ```sh
-  gradle test
-  ```
-- Clean build files:  
-  ```sh
-  gradle clean
-  ```
+```bash
+gradle clean
+gradle test
+gradle build
+```
 
-## 4. Useful Resources
+## Tài liệu chính thức
 
-- [Gradle Documentation](https://docs.gradle.org/)
-- [Gradle Build Script Basics](https://docs.gradle.org/current/userguide/tutorial_java_projects.html)
+- https://docs.gradle.org/
