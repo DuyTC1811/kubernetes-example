@@ -1,52 +1,41 @@
-# Install Docker
+# Cài Docker trên Oracle Linux 9
 
-Follow these steps to install Docker on your system.
+Hướng dẫn ngắn gọn để cài Docker Engine bằng repo chính thức.
 
-## Prerequisites
+## 1) Gỡ bản Docker cũ (nếu có)
 
-- A supported Linux distribution (e.g., Ubuntu, Debian, CentOS)
-- `sudo` privileges
-
-## 1. Uninstall old versions
-
-```sh
-sudo dnf remove docker \
-                docker-client \
-                docker-client-latest \
-                docker-common \
-                docker-latest \
-                docker-latest-logrotate \
-                docker-logrotate \
-                docker-engine
+```bash
+sudo dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
 ```
 
-## 2. Install using the rpm repository
+## 2) Thêm Docker repository
 
-```sh
+```bash
 sudo dnf -y install dnf-plugins-core
 sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 ```
 
-## 3. Install Docker Engine
+## 3) Cài Docker Engine
 
-```sh
+```bash
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo systemctl enable --now docker
 ```
 
-## 4. Configuring Docker to Use Non-Root User
+## 4) Cho phép chạy Docker không cần root
 
-```sh
+```bash
 sudo usermod -aG docker ${USER}
 newgrp docker
 ```
 
-## 5. Verify Docker Installation
+## 5) Kiểm tra
 
-```sh
+```bash
+docker version
 docker ps
 ```
 
----
+## Tài liệu chính thức
 
-For more details, visit the [official Docker documentation](https://docs.docker.com/engine/install/centos/).
+- https://docs.docker.com/engine/install/centos/
