@@ -54,8 +54,8 @@ frontend k8s-api
 backend kubernetes-backend
     option tcp-check
     balance roundrobin
-    server master-01 192.168.1.14:6443 check
-    server master-02 192.168.1.15:6443 check
+    server master-01 192.168.56.31:6443 check
+    server master-02 192.168.56.32:6443 check
 EOF
 
 echo "[ CHECK STATUS HAPROXY ]" 

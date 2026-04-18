@@ -9,12 +9,12 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/etcd \
   --name etcd-01 \
-  --initial-advertise-peer-urls=https://192.168.1.11:2380 \
-  --listen-peer-urls=https://192.168.1.11:2380 \
-  --listen-client-urls=https://192.168.1.11:2379,https://127.0.0.1:2379 \
-  --advertise-client-urls=https://192.168.1.11:2379 \
+  --initial-advertise-peer-urls=https://192.168.56.21:2380 \
+  --listen-peer-urls=https://192.168.56.21:2380 \
+  --listen-client-urls=https://192.168.56.21:2379,https://127.0.0.1:2379 \
+  --advertise-client-urls=https://192.168.56.21:2379 \
   --initial-cluster-token=etcd-cluster-1 \
-  --initial-cluster=etcd-01=https://192.168.1.11:2380 \
+  --initial-cluster=etcd-01=https://192.168.56.21:2380 \
   --initial-cluster-state=new \
   --data-dir=/var/lib/etcd/data \
   --wal-dir=/var/lib/etcd/wal \

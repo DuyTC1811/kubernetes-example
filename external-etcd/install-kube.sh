@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "[ TURN OFF SWAP ]"
 sudo setenforce 0
