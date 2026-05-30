@@ -1,11 +1,6 @@
 #!/bin/bash
 set -xe
-ETCD_VER=v3.5.17
-
-echo "[ TURN OFF SELINUX ]"
-sudo setenforce 0
-sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-echo "ETCD VERSION: ${ETCD_VER}"
+ETCD_VER=v3.6.11
 
 # choose either URL
 GOOGLE_URL=https://storage.googleapis.com/etcd
@@ -28,7 +23,5 @@ sudo mv -v /tmp/etcd-download-test/etcdutl /usr/local/bin
 
 echo "[ DELETE TEMPORARY FOLDER ]"
 sudo rm -rf /tmp/etcd-download-test
-sudo mkdir -p /var/lib/etcd
-sudo firewall-cmd --add-port=2379-2380/tcp --permanent
-sudo firewall-cmd --reload
-sudo chown -R $(whoami):$(whoami) /var/lib/etcd
+# sudo firewall-cmd --add-port=2379-2380/tcp --permanent
+# sudo firewall-cmd --reload

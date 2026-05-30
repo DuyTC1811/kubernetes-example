@@ -1,30 +1,57 @@
 #!/bin/bash
 set -xe
-cat <<EOF > /etc/systemd/system/etcd.service
+
+NODE_NAME="etcd-02"
+NODE_IP="192.168.122.22"
+
+ETCD_01_IP="192.168.122.21"
+ETCD_02_IP="192.168.122.22"
+ETCD_03_IP="192.168.122.23"
+
+PKI_DIR="/etc/etcd/pki"
+DATA_DIR="/var/lib/etcd/data"
+WAL_DIR="/var/lib/etcd/wal"
+LOG_DIR="/var/log/etcd"
+
+# 1. Check certificate files
+test -f "${PKI_DIR}/ca.pem"
+test -f "${PKI_DIR}/etcd.pem"
+test -f "${PKI_DIR}/etcd-key.pem"
+
+# 2. Create required directories
+sudo mkdir -p "${DATA_DIR}" "${WAL_DIR}" "${LOG_DIR}"
+
+# 4. Create systemd service
+cat <<EOF | sudo tee /etc/systemd/system/etcd.service > /dev/null
 [Unit]
-Description=etcd-02
+Description=etcd ${NODE_NAME}
 Documentation=https://etcd.io/docs/
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+Type=notify
 ExecStart=/usr/local/bin/etcd \\
-  --name etcd-02 \\
-  --initial-advertise-peer-urls https://192.168.56.22:2380 \\
-  --listen-peer-urls https://192.168.56.22:2380 \\
-  --listen-client-urls https://192.168.56.22:2379,https://127.0.0.1:2379 \\
-  --advertise-client-urls https://192.168.56.22:2379 \\
+  --name ${NODE_NAME} \\
+  --initial-advertise-peer-urls https://${NODE_IP}:2380 \\
+  --listen-peer-urls https://${NODE_IP}:2380 \\
+  --listen-client-urls https://${NODE_IP}:2379,https://127.0.0.1:2379 \\
+  --advertise-client-urls https://${NODE_IP}:2379 \\
   --initial-cluster-token etcd-cluster-1 \\
-  --initial-cluster etcd-01=https://192.168.56.21:2380,etcd-02=https://192.168.56.22:2380,etcd-03=https://192.168.56.23:2380 \\
-  --log-outputs=/var/lib/etcd/etcd.log \\
+  --initial-cluster etcd-01=https://${ETCD_01_IP}:2380,etcd-02=https://${ETCD_02_IP}:2380,etcd-03=https://${ETCD_03_IP}:2380 \\
   --initial-cluster-state new \\
-  --peer-auto-tls \\
-  --snapshot-count '10000' \\
-  --wal-dir=/var/lib/etcd/wal \\
-  --data-dir=/var/lib/etcd/data \\
+  --snapshot-count 10000 \\
+  --wal-dir ${WAL_DIR} \\
+  --data-dir ${DATA_DIR} \\
+  --log-outputs ${LOG_DIR}/etcd.log \\
   --client-cert-auth \\
-  --trusted-ca-file=/var/lib/etcd/ca.pem \\
-  --cert-file=/var/lib/etcd/etcd.pem \\
-  --key-file=/var/lib/etcd/etcd-key.pem
+  --trusted-ca-file ${PKI_DIR}/ca.pem \\
+  --cert-file ${PKI_DIR}/etcd.pem \\
+  --key-file ${PKI_DIR}/etcd-key.pem \\
+  --peer-client-cert-auth \\
+  --peer-trusted-ca-file ${PKI_DIR}/ca.pem \\
+  --peer-cert-file ${PKI_DIR}/etcd.pem \\
+  --peer-key-file ${PKI_DIR}/etcd-key.pem
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536
@@ -32,10 +59,20 @@ LimitNOFILE=65536
 [Install]
 WantedBy=multi-user.target
 EOF
+
+# 5. Start etcd
 sudo systemctl daemon-reload
 sudo systemctl enable etcd
-sudo systemctl start etcd
+sudo systemctl restart etcd
 
+sudo apt update
+sudo apt install -y ufw
+sudo ufw allow 22/tcp
+sudo ufw allow 2379/tcp
+sudo ufw allow 2380/tcp
+sudo ufw enable
+
+# sudo tail -n 200 -F /var/log/etcd/*.log
 # etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
 # etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint status -w=table --cluster
 # etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem member list -w=table
