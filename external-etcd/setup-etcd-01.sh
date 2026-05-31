@@ -65,6 +65,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable etcd
 sudo systemctl restart etcd
 
+# sudo apt update
+# sudo apt install -y ufw
+# sudo ufw allow 22/tcp
+# sudo ufw allow 2379/tcp
+# sudo ufw allow 2380/tcp
+# sudo ufw enable
+
 #  XEM LOG
 # sudo tail -n 200 -F /var/log/etcd/*.log
 # etcdctl --cacert=/etc/etcd/pki/ca.pem --cert=/etc/etcd/pki/etcd.pem --key=/etc/etcd/pki/etcd-key.pem endpoint health -w=table --cluster

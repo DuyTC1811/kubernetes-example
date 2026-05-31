@@ -33,17 +33,6 @@ fi
 echo "==> Set hostname to ${NODE_HOSTNAME}"
 hostnamectl set-hostname "${NODE_HOSTNAME}"
 
-# echo "==> Backup current network/hosts config"
-# mkdir -p /root/network-backup
-
-# if [[ -f /etc/hosts ]]; then
-#   cp -a /etc/hosts "/root/network-backup/hosts.$(date +%Y%m%d%H%M%S)"
-# fi
-
-# if [[ -d /etc/systemd/network ]]; then
-#   cp -a /etc/systemd/network "/root/network-backup/systemd-network.$(date +%Y%m%d%H%M%S)"
-# fi
-
 echo "==> Create systemd-networkd config"
 mkdir -p /etc/systemd/network
 
@@ -72,14 +61,6 @@ ${ETCD1_IP} etcd-01.${DOMAIN} etcd-01
 ${ETCD2_IP} etcd-02.${DOMAIN} etcd-02
 ${ETCD3_IP} etcd-03.${DOMAIN} etcd-03
 EOF
-
-# echo "==> Update /etc/resolv.conf"
-# rm -f /etc/resolv.conf
-# cat > /etc/resolv.conf <<EOF
-# nameserver ${DNS1}
-# nameserver ${DNS2}
-# search ${DOMAIN}
-# EOF
 
 echo "==> Disable NetworkManager if exists"
 if systemctl list-unit-files | grep -q '^NetworkManager.service'; then
@@ -121,10 +102,6 @@ ip -br addr show "${INTERFACE}"
 echo
 echo "Route:"
 ip route
-
-# echo
-# echo "DNS:"
-# cat /etc/resolv.conf
 
 echo
 echo "Reconnect SSH using:"

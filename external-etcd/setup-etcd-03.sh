@@ -65,6 +65,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable etcd
 sudo systemctl restart etcd
 
+# sudo apt update
+# sudo apt install -y ufw
+# sudo ufw allow 22/tcp
+# sudo ufw allow 2379/tcp
+# sudo ufw allow 2380/tcp
+# sudo ufw enable
+
 # sudo tail -n 200 -F /var/log/etcd/*.log
 # etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint health -w=table --cluster
 # etcdctl --cacert=/var/lib/etcd/ca.pem --cert=/var/lib/etcd/etcd.pem --key=/var/lib/etcd/etcd-key.pem endpoint status -w=table --cluster
