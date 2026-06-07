@@ -3,19 +3,20 @@ apiVersion: kubeadm.k8s.io/v1beta4
 kind: JoinConfiguration
 discovery:
   bootstrapToken:
-    token: "783bde.3f89s0fje9f38fhf"
-    apiServerEndpoint: "192.168.1.10:6443" # Địa chỉ IP loadBalancer hoặc IP của server control plane
+    token: "abcdef.0123456789abcdef"
+    apiServerEndpoint: "192.168.122.20:6443" # Địa chỉ IP loadBalancer hoặc IP của server control plane
     caCertHashes:
-      - "sha256:eb5c721b5cf594f5b17ec50f389682de1f0031f3bf17edbf660c5d964e29edd4"     # --discovery-token-ca-cert-hash
+      - "sha256:b444f6f8a471e80c2c451d6d164cfe1520ab09eaa6e3375e0a238b3bf3ecf1e2"     # --discovery-token-ca-cert-hash
 controlPlane:
-  certificateKey: "8e87db027d2abe0aaf01e6239619da3081a4dc5dbb3a5596d09884a13da59902"  #--control-plane --certificate-key
+  certificateKey: "3341432cbb4435e41638999c66362a101b71a0ad9e65e5949c4952bb99bb800c"  #--control-plane --certificate-key
   localAPIEndpoint:
-    advertiseAddress: "192.168.1.15" # Địa chỉ IP của server control plane
-    bindPort: 6443                    # Cổng mặc định API server
+    advertiseAddress: "192.168.122.31" # Địa chỉ IP của server control plane
+    bindPort: 6443
 nodeRegistration:
   name: "master-02"                   # Tên của node
   criSocket: "unix:///var/run/containerd/containerd.sock"
-  taints: []
   ignorePreflightErrors:
     - IsPrivilegedUser
   imagePullPolicy: "IfNotPresent"
+
+# sudo kubeadm join --config join-master-02.yaml

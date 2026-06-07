@@ -1,62 +1,73 @@
----
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
 bootstrapTokens:
-  - token: "9a08jv.c0izixklcxtmnze7"
+  - token: "abcdef.0123456789abcdef"
     description: "kubeadm bootstrap token"
     ttl: "24h"
-  - token: "783bde.3f89s0fje9f38fhf"
-    description: "another bootstrap token"
     usages:
       - authentication
       - signing
     groups:
       - system:bootstrappers:kubeadm:default-node-token
+
 nodeRegistration:
   name: "master-01"
   criSocket: "unix:///var/run/containerd/containerd.sock"
-  taints: []
-  ignorePreflightErrors:
-    - IsPrivilegedUser
   imagePullPolicy: "IfNotPresent"
+  imagePullSerial: true
+  # Lab only: cho phép workload chạy trên control-plane
+  # Production/HA nên bỏ dòng này để kubeadm tự taint control-plane
+  # taints: []
+
 localAPIEndpoint:
-  advertiseAddress: "192.168.1.14"   # IP address of the control plane server
-  bindPort: 6443                      # Default API server port
-certificateKey: "c7b09915bb905c55f87bb012092fc043ad8d74e4d2b172c1131b6d8505a7babf"  # Generated from "kubeadm certs certificate-key"
+  advertiseAddress: "192.168.122.30" # Địa chỉ IP của server control plane
+  bindPort: 6443
+
+certificateKey: "3341432cbb4435e41638999c66362a101b71a0ad9e65e5949c4952bb99bb800c" # sudo kubeadm certs certificate-key
+
 timeouts:
-  controlPlaneComponentHealthCheck: "60s"  # Wait 60 seconds for control plane component health check
+  controlPlaneComponentHealthCheck: "60s"
 
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-kubernetesVersion: "stable"  # Replace this value with specific version if needed
-controlPlaneEndpoint: "192.168.1.10:6443"  # LoadBalancer/Public IP OR Private IP
+kubernetesVersion: "v1.36.0"
+controlPlaneEndpoint: "192.168.122.20:6443"  # LoadBalancer/Public IP OR Private IP
 clusterName: "example-cluster"
-certificatesDir: "/etc/kubernetes/pki"  # Directory for TLS certificates
-imageRepository: "registry.k8s.io"      # Official registry for Kubernetes images
-encryptionAlgorithm: ECDSA-P256         # TLS encryption algorithm (recommended)
+certificatesDir: "/etc/kubernetes/pki"       # Directory for TLS certificates
+imageRepository: "registry.k8s.io"
+encryptionAlgorithm: "ECDSA-P256"
 
 networking:
-  serviceSubnet: "10.96.0.0/16"    # Address range for Services
-  podSubnet: "10.244.0.0/16"       # Address range for Pods
-  dnsDomain: "cluster.local"       # Internal DNS domain name
+  serviceSubnet: "10.96.0.0/16"
+  podSubnet: "10.244.0.0/16"
+  dnsDomain: "cluster.local"
 
 etcd:
   external:
     endpoints:
-      - "https://192.168.1.11:2379" # Endpoint of the external etcd server
-    caFile: "/etc/kubernetes/pki/etcd/ca.pem"
-    certFile: "/etc/kubernetes/pki/etcd/etcd.pem"
-    keyFile: "/etc/kubernetes/pki/etcd/etcd-key.pem"
+      - "https://192.168.122.21:2379"
+      - "https://192.168.122.22:2379"
+      - "https://192.168.122.23:2379"
+    caFile: "/etc/etcd/pki/ca.pem"
+    certFile: "/etc/etcd/pki/etcd.pem"
+    keyFile: "/etc/etcd/pki/etcd-key.pem"
 
 apiServer:
   certSANs:
-    - "192.168.1.10"  # LoadBalancer/Public IP OR Private IP
+    - "192.168.122.20"
+    - "192.168.122.30"
+    - "192.168.122.31"
+    - "master-01"
+    - "master-02"
 
-# Component configurations
 controllerManager: {}
 scheduler: {}
-dns: {}
+
+dns:
+  disabled: false
+
 proxy:
-  disabled: true   # disable kube-proxy
-  
+  disabled: true
+
+# sudo kubeadm init --config kubeadm-config.yaml --upload-certs

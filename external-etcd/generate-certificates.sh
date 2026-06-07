@@ -8,10 +8,24 @@ CERT_DIR="openssl"
 REMOTE_USER="debian"
 REMOTE_CERT_DIR="/etc/etcd/pki"
 
+DOMAIN="lab.local"
+ETCD1_HOST="etcd-01"
+ETCD2_HOST="etcd-02"
+ETCD3_HOST="etcd-03"
+ETCD1_IP="192.168.122.21"
+ETCD2_IP="192.168.122.22"
+ETCD3_IP="192.168.122.23"
+MASTER1_HOST="master-01"
+MASTER2_HOST="master-02"
+MASTER1_IP="192.168.122.30"
+MASTER2_IP="192.168.122.31"
+
 ETCD_SERVERS=(
-  "192.168.122.21"
-  "192.168.122.22"
-  "192.168.122.23"
+  "${ETCD1_IP}"
+  "${ETCD2_IP}"
+  "${ETCD3_IP}"
+  "${MASTER1_IP}"
+  "${MASTER2_IP}"
 )
 
 # =========================
@@ -82,16 +96,21 @@ subjectAltName = @alt_names
 
 [ alt_names ]
 DNS.1 = localhost
-DNS.2 = etcd-01
-DNS.3 = etcd-02
-DNS.4 = etcd-03
-DNS.5 = etcd-01.lab.local
-DNS.6 = etcd-02.lab.local
-DNS.7 = etcd-03.lab.local
+DNS.2 = ${ETCD1_HOST}
+DNS.3 = ${ETCD2_HOST}
+DNS.4 = ${ETCD3_HOST}
+DNS.5 = ${ETCD1_HOST}.${DOMAIN}
+DNS.6 = ${ETCD2_HOST}.${DOMAIN}
+DNS.7 = ${ETCD3_HOST}.${DOMAIN}
+DNS.8 = ${MASTER1_HOST}.${DOMAIN}
+DNS.9 = ${MASTER2_HOST}.${DOMAIN}
+
 IP.1 = 127.0.0.1
-IP.2 = 192.168.122.21
-IP.3 = 192.168.122.22
-IP.4 = 192.168.122.23
+IP.2 = ${ETCD1_IP}
+IP.3 = ${ETCD2_IP}
+IP.4 = ${ETCD3_IP}
+IP.5 = ${MASTER1_IP}
+IP.6 = ${MASTER2_IP}
 EOF
 
 echo ">>> CREATING ETCD KEY AND CSR..."

@@ -1,64 +1,78 @@
 #!/bin/bash
-set -xe
+set -euo pipefail
 
-# Cập nhật hệ thống và cài đặt HAProxy
-echo "[ SETUP AND SETTING HAPROXY ]"
-sudo setenforce 0
-sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-sudo dnf update -y --quiet
-sudo dnf install -y --quiet haproxy
-sleep 2s
+echo "[ SETUP HAPROXY ON DEBIAN ]"
 
-echo "[ ENABLE HAPROXY TO AUTOMATICALLY START ON REBOOT ]"
-sudo systemctl enable --now haproxy
+sudo apt update
+sudo apt install -y haproxy
+echo "[ CONFIGURE UFW ]"
 
-echo "[ CONFIGURATION HAPROXY ]" 
+# Allow SSH trước để tránh mất kết nối
+sudo apt install -y ufw
+sudo ufw allow OpenSSH
+# Allow HAProxy Stats UI
+sudo ufw allow 8404/tcp
+# Allow Kubernetes API Load Balancer
+sudo ufw allow 6443/tcp
+# Enable UFW không hỏi y/n
+sudo ufw --force enable
+
+echo "[ CONFIGURE HAPROXY ]"
 cat <<'EOF' | sudo tee /etc/haproxy/haproxy.cfg >/dev/null
 global
-    # local2.*  /var/log/haproxy.log
-    log         127.0.0.1 local2
-
-    chroot	    /var/lib/haproxy
-    pidfile     /var/run/haproxy.pid
-    maxconn     4000
-    user        haproxy
-    group	    haproxy
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
     daemon
+    maxconn 4000
 
-    # turn on stats unix socket
-    stats socket /var/lib/haproxy/stats
-
-#---------------------------------------------------------------------
-# common defaults that all the 'listen' and 'backend' sections will
-# use if not designated in their block
-#---------------------------------------------------------------------
 defaults
-    mode                    tcp
-    log                     global
-    option                  tcplog
-    retries                 3
-    timeout connect         10s
-    timeout client          1m
-    timeout server          1m
+    log global
+    mode tcp
+    option tcplog
+    option dontlognull
+    retries 3
+    timeout connect 10s
+    timeout client 1m
+    timeout server 1m
 
-#---------------------------------------------------------------------
-# k8s-api frontend which proxys to the backends
-#---------------------------------------------------------------------
 frontend k8s-api
     bind *:6443
-    default_backend             kubernetes-backend
+    mode tcp
+    default_backend kubernetes-backend
 
-#---------------------------------------------------------------------
-# Backend cho Kubernetes API Server
-#---------------------------------------------------------------------
 backend kubernetes-backend
-    option tcp-check
+    mode tcp
     balance roundrobin
-    server master-01 192.168.56.31:6443 check
-    server master-02 192.168.56.32:6443 check
+    option tcp-check
+    default-server inter 3s fall 3 rise 2
+    server master-01 192.168.122.31:6443 check
+    server master-02 192.168.122.32:6443 check
+
+listen stats
+    bind *:8404
+    mode http
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+    stats show-legends
+    stats auth admin:admin123
 EOF
 
-echo "[ CHECK STATUS HAPROXY ]" 
+echo "[ CHECK HAPROXY CONFIG ]"
 sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+
+echo "[ ENABLE AND RESTART HAPROXY ]"
+sudo systemctl enable haproxy
 sudo systemctl restart haproxy
+
+echo "[ CHECK HAPROXY STATUS ]"
 sudo systemctl status haproxy --no-pager
+
+# http://192.168.122.94:8404/stats
+#  XEM LOG
+# sudo journalctl -u haproxy -f

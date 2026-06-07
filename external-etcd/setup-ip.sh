@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # ===== Config node =====
-NODE_HOSTNAME="worker-03"
-STATIC_IP="192.168.122.36"
+NODE_HOSTNAME="load-balancer"
+STATIC_IP="192.168.122.20"
 INTERFACE="enp1s0"
 
 # ===== Network config =====
@@ -12,12 +12,9 @@ DNS1="8.8.8.8"
 DNS2="1.1.1.1"
 DOMAIN="lab.local"
 
-# ===== nodes =====
+# ===== etcd nodes =====
 MASTER1_IP="192.168.122.30"
 MASTER2_IP="192.168.122.31"
-WORKER1_IP="192.168.122.34"
-WORKER2_IP="192.168.122.35"
-WORKER3_IP="192.168.122.36"
 
 if [[ "$EUID" -ne 0 ]]; then
   echo "ERROR: Please run as root or use sudo"
@@ -61,9 +58,6 @@ cat > /etc/hosts <<EOF
 
 ${MASTER1_IP} master-01.${DOMAIN} master-01
 ${MASTER2_IP} master-02.${DOMAIN} master-02
-${WORKER1_IP} worker-01.${DOMAIN} worker-01
-${WORKER2_IP} worker-02.${DOMAIN} worker-02
-${WORKER3_IP} worker-03.${DOMAIN} worker-03
 EOF
 
 echo "==> Disable NetworkManager if exists"
@@ -110,4 +104,3 @@ ip route
 echo
 echo "Reconnect SSH using:"
 echo "ssh debian@${STATIC_IP}"
-
