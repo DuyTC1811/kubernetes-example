@@ -73,6 +73,10 @@ sudo systemctl restart haproxy
 echo "[ CHECK HAPROXY STATUS ]"
 sudo systemctl status haproxy --no-pager
 
-# http://192.168.122.94:8404/stats
+# http://192.168.122.20:8404/stats
 #  XEM LOG
 # sudo journalctl -u haproxy -f
+
+# sudo ufw allow 80/tcp
+# sudo ufw reload
+# sudo ufw status

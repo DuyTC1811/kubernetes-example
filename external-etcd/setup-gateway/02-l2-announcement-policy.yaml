@@ -1,0 +1,13 @@
+# truoc het kiem tra interface mang
+# vidu: "ip route | grep default"
+# output: default via 192.168.122.1 dev enp1s0 proto static src 192.168.122.30 
+
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: gateway-l2-policy
+spec:
+  interfaces:
+    - enp1s0
+  externalIPs: true
+  loadBalancerIPs: true

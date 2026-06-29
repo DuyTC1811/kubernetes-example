@@ -1,0 +1,27 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headlamp-route
+  namespace: kube-system
+spec:
+  parentRefs:
+    - name: public-gateway
+      namespace: gateway
+  hostnames:
+    - headlamp.k8s.test
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: headlamp
+          port: 80
+
+# helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+# helm repo update
+# helm install headlamp headlamp/headlamp   --namespace kube-system
+# LAY TOKEN FOR HEADLAMP
+# kubectl create token headlamp -n kube-system --duration=8760h
+
+# eyJhbGciOiJFUzI1NiIsImtpZCI6Ikc4RnRHSVVVSS1ONzdVd1hsWWxqNFpTMWtuOEE1SWw0SHpCSml0Q01DMUUifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxODEyNTU0MTUxLCJpYXQiOjE3ODEwMTgxNTEsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiODVjOGMwZWQtZGI5MS00YmE3LWE0YmEtOTZhODRhYmFlZTE2Iiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJoZWFkbGFtcCIsInVpZCI6IjhiMDVkM2NhLTA2M2ItNGM4Ni1hYTI5LWQyNTVlMTg0NGE1MiJ9fSwibmJmIjoxNzgxMDE4MTUxLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZS1zeXN0ZW06aGVhZGxhbXAifQ.U4-fWhA7H8M3Iq7shQMMFQFX9YybHMbty-tq5VXM7y1VtxaptUx6HEg6QVymq0plCwOpgaX-WgsV3VhcAKIwOA

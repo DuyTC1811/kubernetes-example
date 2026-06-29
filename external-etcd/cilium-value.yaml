@@ -5,6 +5,9 @@ kubeProxyReplacement: true
 k8sServiceHost: 192.168.122.20
 k8sServicePort: 6443
 
+# Bật L7 proxy rõ ràng cho Gateway API/HTTPRoute
+l7Proxy: true
+
 # IPAM: dùng PodCIDR do Kubernetes/kube-controller-manager cấp cho Node
 ipam:
   mode: kubernetes
@@ -18,8 +21,16 @@ ipv4NativeRoutingCIDR: 10.244.0.0/16
 gatewayAPI:
   enabled: true
   gatewayClass:
-    create: "auto"
+    create: false # |"auto"| -> Phien ban 1.19.4 dang loi tu dong tao CiliumGatewayClass, nen de false sau len # 1.20.0+ da fix loi nay, nen co the de true
 
+# Bật L2 Announcement để quảng bá LoadBalancer IP trong LAN
+# Dùng cho lab/on-prem khi chưa cấu hình BGP router/FRR đầy đủ
+l2announcements:
+  enabled: true
+
+# Bật BGP Control Plane
+# Chỉ có tác dụng khi tạo thêm các manifest BGP:
+# CiliumBGPClusterConfig, CiliumBGPPeerConfig, CiliumBGPAdvertisement
 bgpControlPlane:
   enabled: true
 
@@ -34,6 +45,12 @@ envoy:
         - NET_ADMIN
         - SYS_ADMIN
 
+# Tăng rate limit cho k8s client vì L2 Announcement dùng lease/leader election
+# Lab nhỏ có thể để như này
+k8sClientRateLimit:
+  qps: 20
+  burst: 40
+
 # Debug chỉ nên bật khi lab/troubleshooting
 debug:
   enabled: true
@@ -45,3 +62,18 @@ debug:
 #   --version 1.19.4 \
 #   --namespace kube-system \
 #   -f cilium-values-1.19.4.yaml
+
+
+# UPDATE VERSION
+# helm repo update
+
+# helm upgrade cilium cilium/cilium \
+#   --version 1.19.5 \
+#   --namespace kube-system \
+#   -f cilium-values-1.19.5.yaml
+
+# kubectl -n kube-system rollout restart deployment/cilium-operator
+# kubectl -n kube-system rollout restart ds/cilium
+# helm upgrade cilium cilium/cilium --version 1.19.4 --namespace kube-system -f cilium-values-1.19.4.yaml
+# kubectl -n kube-system rollout restart deployment/cilium-operator
+# kubectl -n kube-system rollout restart ds/cilium
